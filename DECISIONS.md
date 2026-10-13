@@ -156,3 +156,49 @@ The eyes are a left/right-symmetric source, so the ocular class difference shoul
 
 ### D19. Below-chance order decoder is a CV artefact of a structured sequence, not a route
 R5_order scores 37.5% (0/37 above threshold; shuffled 50.8%). The class sequence is strongly anti-persistent (P(same as previous) = 0.25, pooled binomial p = 3.7e-88), so labels at neighbouring positions are anti-correlated. Training folds therefore systematically mislead the position-only LDA on held-out neighbours. Position alone does not predict class (no subject above threshold). The anti-persistence does matter in another way: it turns any trace of the previous trial into information about the current one (D17).
+
+---
+
+## Part B — Networks (`task1/models.py`, `task1/train.py`)
+
+### D20. Fixed subject-wise 5-fold scheme
+- **Choice:** the 37 kept subjects are permuted once with the project seed and split into 5 folds of 8/8/7/7/7 (`outputs/task1/folds.csv`). Every model, seed and experiment uses the same folds, so every subject is a test subject exactly once and per-subject accuracies can be compared across models.
+- **Alternatives:** leave-one-subject-out (37 folds); one fixed train/test split.
+- **Why:** LOSO would multiply training cost by 7× (~1,400 runs); a single split would give B2.5 only ~7 test subjects to correlate with Part A.
+- **With the alternatives:** LOSO gives ~1 more training subject per model (≈ +3% data), so accuracies would be marginally higher; a single split would make the B2.5 correlations meaningless (n ≈ 7).
+
+### D21. Network input: 0–3.975 s, CAR, 80 Hz, per-trial scale
+- **Choice:** (1) crop to the imagery period after the cue; (2) common average reference; (3) resample 160 → 80 Hz; (4) divide each trial by its own SD over channels and time.
+- **Why:** (1) the pre-cue window carries the previous trial's eye position (A3 D17), which is not imagery. (2) The shared reference signal is 25–60% of the variance and differs between subjects (D9); CAR is a fixed linear map, so it uses no statistics. (3) Every route that matters (mu/beta ≤ 30 Hz, EOG, visual evoked) sits below the 40 Hz Nyquist, and 80 Hz halves the cost of ~200 training runs. (4) Amplitude differs 5–8× between subjects (D8); one scalar per trial removes that and keeps every within-trial relation.
+- **Leakage check:** none of the four steps uses a statistic computed over more than the single trial being processed, so test trials cannot influence training or each other.
+- **Alternatives and what would change:** CSD instead of CAR would sharpen the motor signal but needs spline fitting on a montage that B2.3 deliberately perturbs; 160 Hz would let the networks use the EMG route (A3: 53%, 6/37 subjects) and cost 2× more; per-channel z-scoring would erase between-channel power differences, i.e. the C3-vs-C4 ERD contrast itself; dataset-level z-scoring would need training-set statistics (allowed) but leave the 5–8× subject differences in place.
+
+### D22. EEGNet hyperparameters changed for this data
+The paper's lengths are in samples at 128 Hz; they are converted to seconds and back to samples at 80 Hz:
+
+| hyperparameter | paper (128 Hz) | here (80 Hz) | why |
+|---|---|---|---|
+| temporal kernel length | 64 (0.5 s) | **40** (0.5 s) | same filter duration: 4 cycles of 8 Hz, resolves down to 2 Hz |
+| first average pool | 4 (→ 32 Hz) | **2** (→ 40 Hz) | 32 Hz is not reachable from 80 Hz with an integer pool; rounding to 40 Hz keeps more temporal detail |
+| separable kernel | 16 (0.5 s at 32 Hz) | **20** (0.5 s at 40 Hz) | same duration |
+| input length | 2 s × 128 Hz | 3.975 s × 80 Hz = **318** | the imagery period here lasts 4.1 s |
+| classifier input | 16 × 4 | **16 × 19** | follows from the above |
+
+Unchanged: F1 = 8, D = 2, F2 = 16, second pool 8, dropout 0.5 (the paper's cross-subject value), max-norm 1.0 on the depthwise spatial filter and 0.25 on the classifier, ELU, batch norm. **2,642 parameters.**
+
+### D23. Transformer design (one encoder, three tokenisers)
+- **Encoder:** CLS token + 2 pre-norm blocks (d = 16, 2 heads, FF 32, dropout 0.25), classification from the CLS token. A custom block built from `nn.MultiheadAttention` replaces `nn.TransformerEncoderLayer` only so that attention weights can be read out (B2.4).
+- **Time-patch tokeniser (TF-time, 6,962 params):** temporal filter bank (8 × 0.5 s) → per-filter spatial filters over all 64 channels (D = 2) → 13 non-overlapping 0.3 s patches, each pooled to 4 values per map → linear embedding + sinusoidal position.
+- **Channel tokeniser (TF-chan-id 6,930 / TF-chan-noid 5,906 params):** the same 8-filter temporal bank applied to every electrode separately (shared weights) → 8 × 0.5 s segments → linear embedding; plus a learned 64 × 16 electrode-identity embedding in the "id" variant.
+- **Budget:** 3 × 2,642 = 7,926; all three variants are within it.
+- **Why:** the front ends deliberately reuse EEGNet's ideas (band filters of 0.5 s, depthwise spatial filters), so that comparisons with EEGNet isolate what attention adds and comparisons between tokenisers isolate the tokeniser. d = 16 is what the parameter budget allows with two layers.
+- **Alternative:** a larger patch embedding straight from raw samples (64 ch × patch → d) would need 64 × 24 × 16 ≈ 25k parameters per embedding alone, over budget.
+
+### D24. Training: fixed length, no early stopping, no tuning on held-out subjects
+- **Choice:** AdamW (lr 1e-3, weight decay 1e-2), batch 64 sampled with replacement, 5% warm-up then cosine decay; length = 25 passes over the training set, clipped to 200–500 steps; no early stopping, no validation set. All hyperparameters were fixed before any test accuracy was seen. The only pre-run check was the **training** loss on fold 0's training subjects (EEGNet 0.36, TF-time 0.43, TF-chan-id ≈ 0.45 at 500 steps, flat over the last 100–200 steps).
+- **Alternatives:** early stopping on held-out subjects; tuning hyperparameters on a validation fold.
+- **Why:** every subject is a test subject in some fold, so any tuning on held-out subjects leaks into some fold's test set; the brief forbids early stopping on test subjects.
+- **With the alternatives:** done properly (inner validation subjects inside each training pool) it would cost one fewer training subject and probably gain 1–2 points; done improperly it would inflate accuracy.
+
+### D25. Seeds
+- Run seed = project seed + 100 × seed index + fold; seed index ∈ {0, 1, 2}. The seed sets weight initialisation, batch sampling and, in B2.1, which training subjects are drawn. Training subsets are nested (5 ⊂ 10 ⊂ 20 ⊂ all) per (fold, seed), and EEGNet and the transformer get the same subjects.

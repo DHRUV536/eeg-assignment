@@ -47,3 +47,25 @@ What I had seen when writing each one is stated, so it is clear what the predict
 | motor reference | ≈ 60–62% | **55.3%** (7/37) | **lower** than predicted |
 
 **Where the reasoning went wrong.** I expected ocular > motor but underestimated by how much: the restricted ocular decoder beats the restricted motor decoder by 16 points on average and in 34/37 subjects. I assumed BCI2000 randomises the cue sequence; it alternates far more than chance, which turns the previous trial's eye position into a pre-cue predictor of the next class.
+
+---
+
+## B2.1–B2.3 (written after A3, before any network was evaluated on a test subject)
+Already known: A3 (ocular route 72% within-subject, motor route 55%), training-loss curves on fold 0's training subjects. No test-set accuracy of any network had been computed.
+
+### B2.1 Data scaling (5, 10, 20, all ≈ 29–30 training subjects; 3 seeds; 5 folds)
+- **Both models improve with more subjects; no crossover within this range.** EEGNet stays ahead at every size, with the gap shrinking from ≈ 5 points at 5 subjects to ≈ 2–3 points at all subjects.
+- **Levels:** EEGNet ≈ 60% (5 subjects) → ≈ 68–72% (all); TF-time ≈ 55% → ≈ 65–68%. Seed-to-seed spread ±2–3 points at small N, ±1–2 at all.
+- **Why:** EEGNet hard-codes what EEG decoding needs (a temporal filter bank and fixed spatial filters, then a separable conv) with 2.6k parameters. TF-time has the same front end but replaces the separable conv with attention over 13 time tokens (7k parameters), which has to learn from data which time segments matter. The transformer's weaker prior pays off only with far more data than 30 subjects × 45 trials. Accuracy will be high mostly because the dominant signal (horizontal EOG, F7/F8 polarity flip) has the same spatial pattern in every subject, so it transfers across subjects much better than mu ERD.
+
+### B2.2 Tokenisation (all training subjects)
+- **TF-chan-noid ≈ 50–53% (near chance).** Without an identity embedding, channel tokens are an unordered set; the CLS readout is invariant to permuting electrodes. Left vs right differs by a **mirror** of the same spatial pattern: EOG is +a at F7 and −a at F8 for one direction and the reverse for the other; ERD is low power at C4 for left and at C3 for right. Both give the **same multiset of channel signals**, so they cannot be told apart. Any remaining accuracy has to come from left/right-asymmetric content (anatomy, cap placement, channel-specific noise).
+- **TF-chan-id ≈ 62–66%, below TF-time.** Identity restores "where", but spatial combinations (e.g. F7 − F8) have to be built through attention between tokens after each channel was processed alone, which is harder at d = 16 than TF-time's direct spatial filters.
+- **TF-time ≈ the B2.1 transformer result (~65–68%).**
+- **Does it matter for this task?** Yes. The whole task is a left/right spatial asymmetry, so a permutation-invariant model is structurally unable to solve it, whether the signal is motor or ocular.
+
+### B2.3 Electrode displacement (test time only)
+- **Simulated misplacement:** whole-cap rotations of 0–15° (≈ 0–24 mm at the vertex, for a head radius of ~9 cm), applied separately as a **lateral** shift (rotation about the nose–inion axis) and an **anterior–posterior** shift (rotation about the ear–ear axis). Signals at the displaced positions are interpolated from the true positions with spherical splines.
+- **Prediction:** lateral shifts hurt more than AP shifts, because they break left/right symmetry: a lateral shift makes the electrodes on one side sample the EOG and the motor cortex differently from the other, which looks like a class difference and pushes predictions towards one class. For 5° (~8 mm, a typical placement error) the drop is small (≤ 3 points); at 15° lateral, 5–10 points. AP shifts cost ≤ 3 points even at 15°.
+- **By model:** EEGNet and TF-time degrade similarly (both have one learned 64-weight spatial filter per map). TF-chan-id degrades at least as much, since its identity embeddings are tied to electrode indices whose content has moved. TF-chan-noid stays flat at chance.
+- **Responsible weights:** the first spatial weights (EEGNet `conv_spatial`, TF-time `conv_spatial`, TF-chan-id `id_embed`). The smoother the learned spatial pattern, the smaller the drop; a model relying on a broad ocular field should be more robust than one relying on a focal central (Laplacian-like) pattern.
