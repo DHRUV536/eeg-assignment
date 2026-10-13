@@ -117,3 +117,42 @@ Every non-trivial choice, in the format: **choice / alternative / why / what wou
 
 ### D13. Examples shown
 - 3 "present" subjects with the smallest p (strongest evidence) and 3 "absent" subjects with the largest p (weakest), picked by that rule in code, not by eye.
+
+---
+
+## A3 — Confound audit (`task1/a3_confounds.py`)
+
+### D14. One classifier and one CV scheme for every route
+- **Choice:** standardise → shrinkage LDA (Ledoit–Wolf), within-subject stratified 5-fold CV repeated 10× (seed = project seed + subject); accuracy = mean over repeats.
+- **Alternatives:** a different classifier per route (e.g. CSP+LDA for power, xDAWN for evoked), or a non-linear classifier.
+- **Why:** routes must be comparable with each other, so the only thing that changes between decoders is which signal they see. Shrinkage LDA is stable with 45 trials and 16–128 features.
+- **With the alternatives:** route-specific pipelines would raise some routes (CSP on the motor features especially) and make differences between routes reflect pipeline quality as well as signal content.
+
+### D15. Chance threshold: binomial, p < 0.05, per subject; checked by shuffled labels
+- **Derivation:** for n trials, the threshold is the smallest k/n with P(X ≥ k) ≤ 0.05 for X ~ Binomial(n, 0.5) (Combrisson & Jerbi, 2015). n = 45 → **0.644** (29/45); n = 42 (S104) → **0.643** (27/42). p = 0.5 because classes are balanced (834 left / 828 right overall; 21–24 per class per subject).
+- **Why check it:** CV test folds are not independent tests, so the binomial is only an approximation. Each decoder was also run once with shuffled labels: **5 of 296 shuffled decoders (1.7%)** crossed the threshold, so it is conservative here, not liberal.
+- **Group level:** number of subjects above threshold vs Binomial(37, 0.05), and a one-sided Wilcoxon test of accuracy − 0.5 across subjects.
+- **Alternative:** a per-subject permutation null (e.g. 1,000 shuffles × 10-repeat CV per route and subject).
+- **With the alternative:** thresholds slightly below 0.644 would be expected, given the 1.7% false-positive rate, so a few more subjects would cross; the ordering of routes would not change.
+
+### D16. Route definitions (channels / band / window)
+- R1 ocular: Fp1, Fp2, AF7, AF8, F7, F8, FT7, FT8; raw reference; < 4 Hz; 8 × 0.5 s mean-amplitude bins over 0–4 s, baseline −0.5–0 s.
+- R2 visual evoked: P7, P8, PO7, PO3, POz, PO4, PO8, O1, Oz, O2; CSD; < 20 Hz; 9 × 50 ms bins over 0.05–0.5 s, baseline −0.2–0 s.
+- R3 posterior alpha: same posterior channels; CSD; 8–13 Hz log power 0.5–4 s minus baseline.
+- R4 EMG: 15 peripheral channels; CSD; 30–57 + 63–78 Hz log power 0.5–4 s minus baseline (skips the 60 Hz notch).
+- R5 pre-cue: all 64 channels; CSD; mu and beta log power −2 to −0.25 s.
+- R5 pre-cue ocular (**added after the first A3 run, see D17**): same as R1 but −2 to −0.25 s, no baseline.
+- R5 order: trial position in run + run number only.
+- R6 cue timing: annotation durations per class.
+- Motor reference: CSD mu and beta ERD at the 11 A2 channels.
+- **Why these choices:** each route is restricted to where its mechanism must appear and, where possible, to where the motor signal cannot: the ocular route uses frontal channels below 4 Hz (mu is 8–13 Hz, central); the posterior routes use CSD so frontal EOG cannot spread back to them.
+- **Limit:** the routes are not perfectly separable. Sustained gaze shifts also change posterior signals, and R3 shares the mu band. A3 shows that each route carries information, not that the routes are independent.
+
+### D17. A test added after seeing data, stated as such
+After the first A3 run, `a3_mechanisms.png` showed a ~15 µV F7−F8 class difference **before** the cue, and the sequence check showed that consecutive trials repeat the same class only 25% of the time (random order: 50%). The pre-cue test I had committed (R5, mu/beta power) cannot see a slow eye-position signal, so I added R5_precue_ocular. It is reported separately and was not part of the committed prediction.
+
+### D18. Reference location inferred from the ocular signal
+The eyes are a left/right-symmetric source, so the ocular class difference should be equally large at mirror-image sites. Under the raw reference it is **2.0× (F7/F8), 2.7× (FT7/FT8), 4.1× (T7/T8)** larger on the left; under CAR it is 0.9–1.1× (`a3_reference_asymmetry.csv`). The asymmetry is largest near the ears, which fits a reference electrode on or near the **right ear/mastoid**: it picks up part of the EOG and cancels it on right-side channels. This is the concrete form of the lateral-reference problem in D9. It is also why R1 uses the raw reference only as input to an LDA, which can rebuild any bipolar combination, and never as a measure of hemispheric asymmetry.
+
+### D19. Below-chance order decoder is a CV artefact of a structured sequence, not a route
+R5_order scores 37.5% (0/37 above threshold; shuffled 50.8%). The class sequence is strongly anti-persistent (P(same as previous) = 0.25, pooled binomial p = 3.7e-88), so labels at neighbouring positions are anti-correlated. Training folds therefore systematically mislead the position-only LDA on held-out neighbours. Position alone does not predict class (no subject above threshold). The anti-persistence does matter in another way: it turns any trace of the previous trial into information about the current one (D17).

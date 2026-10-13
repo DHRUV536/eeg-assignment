@@ -4,6 +4,7 @@ Single entry point: `python main.py` reproduces every number and figure.
 Stages (each writes to outputs/; trial data is cached in cache/):
   Task 1 / A1  data audit                 -> outputs/task1/audit.csv, audit_runs.csv
   Task 1 / A2  ERD and lateralisation     -> outputs/task1/a2_lateralisation.csv, figures/a2_*
+  Task 1 / A3  confound decoders          -> outputs/task1/a3_*.csv, per_subject_table.csv, figures/a3_*
   (later stages are added as they are implemented)
 
 Data: EDF files are read from ../files (or $EEGBCI_DIR) and downloaded through
@@ -52,6 +53,10 @@ def main() -> None:
     if want("a2"):
         from task1.a2_erd import run_a2
         run_a2(out1, seed=SEED)
+    if want("a3"):
+        from task1.a3_confounds import per_subject_table, run_a3
+        run_a3(out1, seed=SEED)
+        per_subject_table(out1)
 
 
 if __name__ == "__main__":

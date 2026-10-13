@@ -32,3 +32,18 @@ What I had seen when writing each one is stated, so it is clear what the predict
 - **Reference point:** a sensorimotor decoder (CSD mu/beta at C3/C4 and neighbours) should reach ≈ 60–62% on average, and should be above threshold mainly in subjects A2 labelled "present".
 
 **Main reason:** the target is visual, peripheral and present for the whole trial, so the eyes are the most direct non-motor path from the cue to the recording, and the lateral-frontal channels pick it up at amplitudes 10–100× larger than mu ERD.
+
+### A3 outcome (added with the results commit; the prediction above is unchanged)
+| Route | Predicted | Observed mean acc. (subjects above 0.644) | Verdict |
+|---|---|---|---|
+| R1 ocular | decodable, ≈ 60%, ~⅓ of subjects | **71.7%** (25/37) | right direction, **much larger** than predicted |
+| R2 visual evoked | ≈ 54–55% group, few subjects | **60.7%** (13/37) | larger than predicted |
+| R3 posterior alpha | ≈ 52%, mostly not | 51.2% (1/37) | as predicted |
+| R4 EMG | ≈ 51–52%, 1–3 subjects | 53.4% (6/37) | slightly larger; 6 subjects, S108 at 84% |
+| R5 pre-cue power | ≈ 50% | 48.1% (1/37) | as predicted |
+| R5 sequence | random | **anti-persistent**: P(same as previous) = 0.25 | **wrong** |
+| R5 pre-cue ocular (added, D17) | — | 57.0% (7/37) | not predicted |
+| R6 cue timing | no difference | 0.000 s | as predicted |
+| motor reference | ≈ 60–62% | **55.3%** (7/37) | **lower** than predicted |
+
+**Where the reasoning went wrong.** I expected ocular > motor but underestimated by how much: the restricted ocular decoder beats the restricted motor decoder by 16 points on average and in 34/37 subjects. I assumed BCI2000 randomises the cue sequence; it alternates far more than chance, which turns the previous trial's eye position into a pre-cue predictor of the next class.
