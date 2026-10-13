@@ -68,13 +68,52 @@ Every non-trivial choice, in the format: **choice / alternative / why / what wou
 - **Why:** **Verified on the data:** the S070 run-4 PSD has a 60 Hz peak 61× the 45–55 Hz median (US mains). The high-pass removes drift but keeps the < 4 Hz ocular signal; leaving content up to 80 Hz keeps the EMG route (> 30 Hz) testable in A3.
 - **With the alternative:** a 1–40 Hz load-time filter would make the EMG route untestable and partly hide the ocular route.
 
-### D7. Window −2 … +4 s around the cue
-- **Choice:** 6 s trials starting 2 s before the cue.
-- **Why:** the 4.1 s rest that precedes every cue holds the baseline; the 4.1 s cue period holds the imagery. 4.0 s rather than 4.1 s keeps one sample of margin.
+### D7. Window −2 … +3.975 s around the cue
+- **Choice:** trials from 2 s before to 3.975 s after the cue (957 samples).
+- **Why:** the 4.1 s rest that precedes every cue holds the baseline; the 4.1 s cue period holds the imagery. **Own inspection:** in many runs the last cue starts at 119.0 s and the file ends at 122.994 s, so a +4.0 s window silently dropped that last trial in 6 subjects (MNE drop log "TOO_SHORT"); +3.975 s keeps them. Only S104's genuinely truncated trial (D4) is lost.
 - **With the alternative:** a shorter pre-cue window (e.g. −1 s) would leave no room for a baseline that excludes cue-anticipation effects.
 
 ### D8. Trial rejection relative to each subject (3 × median p-p, ocular channels excluded)
 - **Choice:** reject a trial if its largest non-Fp/AF peak-to-peak exceeds 3× that subject's median.
 - **Alternative:** a fixed threshold such as 100–500 µV.
-- **Why:** **own inspection:** amplitude differs 5–8× between subjects on every channel (median C3 p-p ≈ 60 µV in S072 vs ≈ 530 µV in S075; same at 1–40 Hz). A fixed 500 µV threshold would reject 60–100% of trials in 19 subjects. About 25–60% of each channel's variance is common to all 64 channels (see D9), which points to the undocumented reference. Result: **0 of 1,649 trials rejected**; within a subject no trial is an outlier by this rule.
+- **Why:** **own inspection:** amplitude differs 5–8× between subjects on every channel (median C3 p-p ≈ 60 µV in S072 vs ≈ 530 µV in S075; same at 1–40 Hz). A fixed 500 µV threshold would reject 60–100% of trials in 19 subjects. About 25–60% of each channel's variance is common to all 64 channels (see D9), which points to the undocumented reference. Result: **0 of 1,662 trials rejected**; within a subject no trial is an outlier by this rule.
 - **With the alternative:** a fixed threshold would remove almost all trials of the high-amplitude subjects and keep everyone else's, which turns amplitude scale into a subject-selection rule.
+
+---
+
+## A2 — Physiological ground truth (`task1/a2_erd.py`)
+
+### D9. Spatial reference: surface Laplacian (CSD), with CAR and raw as sensitivity checks
+**What the missing reference means for C3 vs C4.** Each recorded channel is V(electrode) − V(ref). Power at "C3" is the power of C3 − ref, which contains the reference's own activity and a cross-term between the two. Three consequences:
+1. If the reference carries mu/beta (e.g. a vertex or ear site picking up sensorimotor rhythm), its ERD appears at both C3 and C4 and shrinks their difference.
+2. If the reference is lateral (one ear or mastoid), it adds more to one hemisphere's channels than the other, so a C3−C4 power difference can appear or flip for reasons unrelated to the brain.
+3. Amplitude scale between subjects is set partly by the reference, so absolute power cannot be compared across subjects.
+
+**Own inspection supports this:** 25–60% of each channel's variance is common to all 64 channels (S070 0.60, S072 0.60, S074 0.61, S079 0.25, S085 0.41); C3's SD falls from 48 → 18 µV (S070) and 15 → 6 µV (S072) after removing the common average.
+
+- **Choice:** spherical-spline surface Laplacian (current source density; MNE defaults, spline order 4, λ = 1e-5) on all 64 channels, for every A2 number.
+- **Alternatives:** common average reference (CAR); keep the raw (unknown) reference.
+- **Why:** CSD is reference-free: it estimates the local radial current under each electrode from the second spatial derivative, so any signal shared by all channels (including the reference) cancels exactly. It also sharpens the spatial focus to roughly the electrode's own neighbourhood, which is what a C3-vs-C4 comparison needs. CAR also removes the shared signal, but it subtracts the mean of 64 channels that include the frontal ocular channels, so a large blink leaks into every channel with the opposite sign.
+- **What changes with the alternatives (measured):** lateralised ERD present in **18/37 (CSD), 15/37 (CAR), 12/37 (raw)**; labels agree with CSD for 81% (CAR) and 78% (raw) of subjects. Median contralateral mu ERD shrinks from −1.35 dB (CSD) to −0.80 dB (raw). The raw reference hides a third of the lateralised subjects. Figure: `figures/a2_reference_effect.png`.
+
+### D10. Baseline −1.5 to −0.5 s, pooled over both classes
+- **Choice:** mean power from −1.5 to −0.5 s before the cue, averaged over all trials of the subject (both classes), per channel and frequency.
+- **Alternatives:** −2 to 0 s; a per-trial baseline; a per-class baseline.
+- **Why:** the 4.1 s rest that precedes each cue starts at −4.1 s. −1.5 s is 2.6 s after the previous imagery ended, past the post-imagery beta rebound (≈1–2 s); −0.5 s keeps the 0.5 s Morlet wavelets from smearing the cue response into the baseline, and the cue rhythm is fixed (every 4.1 s), so anticipatory ERD could start just before 0. Pooling over trials avoids the noise of single-trial baselines; pooling over classes guarantees the baseline cannot itself create a left/right difference.
+- **With the alternatives:** ending the baseline at 0 s would let the post-cue drop leak into it and shrink the ERD; a per-class baseline could manufacture lateralisation from pre-cue differences.
+
+### D11. Time–frequency: Morlet wavelets, 4–40 Hz, n_cycles = f/2, ERD window 0.5–3.975 s
+- **Choice:** Morlet power on 11 channels (FC3, C5, C3, C1, CP3, Cz, FC4, C6, C4, C2, CP4); 0.5 s wavelets at every frequency; band power averaged over the ERD window starting 0.5 s after the cue.
+- **Why:** the 0.5 s wavelet gives ~2 Hz resolution in mu while keeping onset smearing short. Starting at 0.5 s skips the visual evoked response to the target appearing (itself an A3 confound route).
+- **Bias found and fixed:** the first version averaged single-trial dB values. Since E[log P] < log E[P] for skewed power, that created a fake −2.5 dB "ERD" over the whole map, including the baseline. Band power is now averaged over frequency and time **before** taking dB, and the figure maps average power over trials before taking dB.
+
+### D12. Lateralisation index, test and label
+- **Index:** for each trial, e_ch = 10·log10(band power in ERD window / subject baseline band power); h = e_C4 − e_C3; **LI = mean(h | right) − mean(h | left)** in dB. Contralateral ERD predicts LI > 0 (right hand → more ERD at C3 → h larger).
+- **Test:** one-sided label-permutation test within the subject, 10,000 permutations, seed = project seed + subject number; p = (1 + #null ≥ observed)/(10,001).
+- **Label "present":** for at least one band, p < 0.025 (two bands, Bonferroni, family-wise α = 0.05) **and** the contralateral band power falls below baseline (mean of C4 on left trials and C3 on right trials < 0 dB). The second condition excludes a lateralisation made only of ipsilateral power increases.
+- **Alternatives:** a normalised LI ((C3−C4)/(C3+C4) in linear power), a t-test, a single band, or no ERD-sign condition.
+- **Why:** a difference of dB values is already normalised for each subject's power scale and its baseline, the permutation test makes no distributional assumption with ~22 trials per class, and the label needs to say "lateralised **ERD**", not "lateralised power".
+- **With the alternatives:** without the Bonferroni split, one more subject would count as present (S076, β p = 0.031). The ERD-sign condition changed no label in this data: every subject with p < 0.025 also had contralateral power below baseline. No correction across the 37 subjects is applied, because each label is a statement about one subject; at α = 0.05 about 1–2 false "present" labels are expected among truly absent subjects.
+
+### D13. Examples shown
+- 3 "present" subjects with the smallest p (strongest evidence) and 3 "absent" subjects with the largest p (weakest), picked by that rule in code, not by eye.

@@ -1,0 +1,12 @@
+# Python 3.13.16; versions used to produce every committed output
+mne==1.13.2
+torch==2.14.1
+numpy==2.5.3
+scipy==1.18.1
+scikit-learn==1.9.1
+matplotlib==3.11.2
+pandas==3.0.5
+edfio==0.4.18
+umap-learn==0.5.12
+pooch==1.9.0
+tqdm==4.70.1
