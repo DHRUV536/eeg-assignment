@@ -1,0 +1,121 @@
+subject,run,file,sfreq_hz,duration_s,n_channels,n_left,n_right,n_rest,cue_dur_min_s,cue_dur_max_s,cue_dur_median_s,unknown_codes,n_events_past_end,flat_channels,huge_channels
+70,4,S070/S070R04.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+70,8,S070/S070R08.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2
+70,12,S070/S070R12.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp2
+71,4,S071/S071R04.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+71,8,S071/S071R08.edf,160.0,125.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+71,12,S071/S071R12.edf,160.0,125.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+72,4,S072/S072R04.edf,160.0,123.0,64,7,8,15,4.0,4.1,4.1,none,0,none,none
+72,8,S072/S072R08.edf,160.0,123.0,64,7,8,15,4.0,4.1,4.1,none,0,none,none
+72,12,S072/S072R12.edf,160.0,124.0,64,8,7,15,4.0,4.1,4.1,none,0,none,none
+73,4,S073/S073R04.edf,160.0,123.0,64,8,7,15,4.0,4.1,4.1,none,0,none,none
+73,8,S073/S073R08.edf,160.0,123.0,64,8,7,15,4.0,4.1,4.1,none,0,none,none
+73,12,S073/S073R12.edf,160.0,123.0,64,7,8,15,4.0,4.1,4.1,none,0,none,none
+74,4,S074/S074R04.edf,160.0,124.0,64,8,7,15,4.0,4.1,4.1,none,0,none,none
+74,8,S074/S074R08.edf,160.0,123.0,64,8,7,15,4.0,4.1,4.1,none,0,none,none
+74,12,S074/S074R12.edf,160.0,123.0,64,8,7,15,4.0,4.1,4.1,none,0,none,none
+75,4,S075/S075R04.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F3 F1 Ft7
+75,8,S075/S075R08.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Cp3 Fp1 Fpz Fp2 Af7 Af3 Afz Af8 F7 F5 F3 F1 F2 Ft7 Iz
+75,12,S075/S075R12.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F3 F1 Fz F2 F4 F6 F8
+76,4,S076/S076R04.edf,160.0,123.0,64,8,7,15,4.0,4.1,4.1,none,0,none,none
+76,8,S076/S076R08.edf,160.0,123.0,64,8,7,15,4.0,4.1,4.1,none,0,none,none
+76,12,S076/S076R12.edf,160.0,123.0,64,7,8,15,4.0,4.1,4.1,none,0,none,none
+77,4,S077/S077R04.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af4 Af8 F8
+77,8,S077/S077R08.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af8
+77,12,S077/S077R12.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af8
+78,4,S078/S078R04.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+78,8,S078/S078R08.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+78,12,S078/S078R12.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+79,4,S079/S079R04.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,P1
+79,8,S079/S079R08.edf,160.0,125.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fpz Fp2 Af7 Af3 Af4 F7 F5 P1 O1 Oz O2 Iz
+79,12,S079/S079R12.edf,160.0,125.0,64,7,8,15,4.1,4.1,4.1,none,0,none,F5 O1 Oz O2 Iz
+80,4,S080/S080R04.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af8
+80,8,S080/S080R08.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fp2 Af8
+80,12,S080/S080R12.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fp2
+81,4,S081/S081R04.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+81,8,S081/S081R08.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+81,12,S081/S081R12.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+82,4,S082/S082R04.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+82,8,S082/S082R08.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+82,12,S082/S082R12.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+83,4,S083/S083R04.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Af8
+83,8,S083/S083R08.edf,160.0,125.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fp2 Af7
+83,12,S083/S083R12.edf,160.0,125.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fp2 Af7 Af8
+84,4,S084/S084R04.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+84,8,S084/S084R08.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp2
+84,12,S084/S084R12.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+85,4,S085/S085R04.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+85,8,S085/S085R08.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+85,12,S085/S085R12.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+86,4,S086/S086R04.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fc5 C5 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F3 F1 Fz F2 F4 F6 F8 Ft7 P1
+86,8,S086/S086R08.edf,160.0,125.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fc5 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F3 F1 Fz F2 F4 F6 F8
+86,12,S086/S086R12.edf,160.0,125.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fpz Fp2 Af7 Af4 Af8
+87,4,S087/S087R04.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fpz Fp2
+87,8,S087/S087R08.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp2
+87,12,S087/S087R12.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af8
+88,4,S088/S088R04.edf,128.0,124.0,64,10,9,19,5.125,5.125,5.125,none,0,none,Fc3 Fc1 Fcz Fc2 Fc4 Fc6 C5 C3 C1 Cz C2 C6 Cp5 Cp3 Cp1 Cpz Cp2 Cp4 Cp6 Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F3 F1 Fz F2 F4 F6 F8 Ft7 Ft8 T7 T8 T9 T10 Tp7 Tp8 P7 P5 P3 P1 Pz P2 P4 P6 P8 Po7 Po3 Poz Po4 Po8 O1 Oz O2 Iz
+88,8,S088/S088R08.edf,128.0,124.0,64,10,9,19,5.125,5.125,5.125,none,0,none,Fc5 Fc3 Fc1 Fcz Fc2 Fc4 Fc6 C5 C3 C1 Cz C2 C4 C6 Cp5 Cp3 Cp1 Cpz Cp2 Cp4 Cp6 Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F3 F1 Fz F2 F4 F6 F8 Ft7 Ft8 T7 T8 T9 T10 Tp7 Tp8 P7 P5 P3 P1 Pz P2 P4 P6 P8 Po7 Po3 Poz Po4 Po8 O1 Oz O2 Iz
+88,12,S088/S088R12.edf,128.0,124.0,64,9,10,19,5.125,5.125,5.125,none,0,none,C6 Cp4 Cp6 Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F3 F1 F2 F4 F8 Ft8 T8 P4 O1 Oz O2 Iz
+89,4,S089/S089R04.edf,160.0,123.0,64,8,7,15,4.1,4.15,4.15,none,0,none,none
+89,8,S089/S089R08.edf,160.0,123.0,64,8,7,15,4.1,4.15,4.15,none,0,none,none
+89,12,S089/S089R12.edf,160.0,123.0,64,8,7,15,4.1,4.15,4.15,none,0,none,none
+90,4,S090/S090R04.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Af4 Af8
+90,8,S090/S090R08.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8
+90,12,S090/S090R12.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5
+91,4,S091/S091R04.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F3 F1 Fz F2 F4 F6 F8
+91,8,S091/S091R08.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F3 F1 Fz F2 F4 F6 F8
+91,12,S091/S091R12.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F3 F1 Fz F2 F4 F6 F8
+92,4,S092/S092R04.edf,128.0,124.0,64,9,10,19,5.125,5.125,5.125,none,0,none,Fp1 Fpz Fp2 Af7
+92,8,S092/S092R08.edf,128.0,124.0,64,9,10,19,5.125,5.125,5.125,none,0,none,none
+92,12,S092/S092R12.edf,128.0,124.0,64,9,10,19,5.125,5.125,5.125,none,0,none,none
+93,4,S093/S093R04.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+93,8,S093/S093R08.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+93,12,S093/S093R12.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+94,4,S094/S094R04.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F6 F8 Ft8
+94,8,S094/S094R08.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fc3 C5 Fp1 Fpz Fp2 Af7 Af3 Af4 Af8 F7 F5 F3 F6
+94,12,S094/S094R12.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F6 F8
+95,4,S095/S095R04.edf,160.0,125.0,64,7,8,15,4.1,4.1,4.1,none,0,none,C5 Af7
+95,8,S095/S095R08.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Cpz Cp4 T10
+95,12,S095/S095R12.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Cz C4 Fp1 Af7 Af4 Po7 Poz Po4 Po8 O1 Oz O2
+96,4,S096/S096R04.edf,160.0,125.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F6
+96,8,S096/S096R08.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fc3 Fc4 Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F3 F1 Fz F2 F4 F6 F8
+96,12,S096/S096R12.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fc5 Fc3 Fc1 Fcz Fc2 Fc4 Fc6 C4 C6 Cp4 Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F3 F1 Fz F2 F4 F6 F8 Ft7 Ft8 T8 T9 T10 P6 P8
+97,4,S097/S097R04.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af3 Afz Af4 Af8 F7 F5
+97,8,S097/S097R08.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fc5 Fc3 Fc1 Fcz Fc2 Fc4 Fc6 C5 C3 C1 Cz C2 C6 Cp1 Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F3 F1 Fz F2 F4 F6 F8 Ft7 Ft8 T7 T8 T9 T10 Tp7 Tp8 P7 P5 P3 P2 P4 P6 P8 Po7 Po3 Poz Po4 Po8 O1 Oz O2 Iz
+97,12,S097/S097R12.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af8
+98,4,S098/S098R04.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+98,8,S098/S098R08.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+98,12,S098/S098R12.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+99,4,S099/S099R04.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Cp4
+99,8,S099/S099R08.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af8 F7 F8
+99,12,S099/S099R12.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af4 Af8 F7 F8
+100,4,S100/S100R04.edf,128.0,123.0,64,6,6,12,5.1,5.125,5.125,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F3 F1
+100,8,S100/S100R08.edf,128.0,123.0,64,6,6,12,5.1,5.125,5.125,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Af4 Af8
+100,12,S100/S100R12.edf,128.0,123.0,64,6,6,12,5.1,5.125,5.125,none,0,none,Fp1 Fpz Fp2 Af7 Af4 Af8
+101,4,S101/S101R04.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fp2
+101,8,S101/S101R08.edf,160.0,125.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2
+101,12,S101/S101R12.edf,160.0,125.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af8
+102,4,S102/S102R04.edf,160.0,123.0,64,7,8,15,4.0,4.1,4.1,none,0,none,none
+102,8,S102/S102R08.edf,160.0,123.0,64,7,8,15,4.0,4.1,4.1,none,0,none,none
+102,12,S102/S102R12.edf,160.0,123.0,64,8,7,15,4.0,4.1,4.1,none,0,none,none
+103,4,S103/S103R04.edf,160.0,125.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1
+103,8,S103/S103R08.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af8
+103,12,S103/S103R12.edf,160.0,125.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+104,4,S104/S104R04.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+104,8,S104/S104R08.edf,160.0,106.0,64,7,6,13,2.975,4.1,4.1,none,0,none,none
+104,12,S104/S104R12.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+105,4,S105/S105R04.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+105,8,S105/S105R08.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+105,12,S105/S105R12.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+106,4,S106/S106R04.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7
+106,8,S106/S106R08.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7
+106,12,S106/S106R12.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7
+107,4,S107/S107R04.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Af8
+107,8,S107/S107R08.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Af8
+107,12,S107/S107R12.edf,160.0,125.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+108,4,S108/S108R04.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af4 Af8 F7 F8 Ft7
+108,8,S108/S108R08.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F6 F8
+108,12,S108/S108R12.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,Fp1 Fpz Fp2 Af7 Af3 Afz Af4 Af8 F7 F5 F6 F8 Ft7
+109,4,S109/S109R04.edf,160.0,123.0,64,7,8,15,4.1,4.1,4.1,none,0,none,none
+109,8,S109/S109R08.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
+109,12,S109/S109R12.edf,160.0,123.0,64,8,7,15,4.1,4.1,4.1,none,0,none,none
