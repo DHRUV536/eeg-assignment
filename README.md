@@ -12,7 +12,11 @@ python main.py --stages a1,a2,a3         # a subset: a1 a2 a3 b2train b23 b24 b2
 
 EDF files are read from `../files` (the PhysioNet folder next to this repository) or from `$EEGBCI_DIR`; any file not found locally is downloaded through `mne.datasets.eegbci`. Trial data and trained weights are cached in `cache/` (not in git).
 
-**Run time on a 2-core CPU:** Part A ≈ 20 min; Part B training ≈ 7 h (≈ 240 training runs of 200–500 steps, ~1–2 min each). Training jobs are written to their CSV as they finish, so an interrupted run continues where it stopped.
+**Run time on a 2-core CPU:** Part A ≈ 20 min; Part B training ≈ 6 h (210 training runs of 200–500 steps, ~1–2 min each). Training jobs are written to their CSV as they finish, so an interrupted run continues where it stopped.
+
+**Reproducibility check:** a full `python main.py` re-run (training jobs resumed from saved weights, every analysis, table and figure recomputed) reproduced every committed CSV byte for byte; one figure (`a3_route_accuracies.png`) differed by sub-pixel point positions because it had first been drawn from the 4-decimal CSV, and the `main.py` version is the one committed.
+
+`REPORT.pdf` = the Task 1 write-up (`outputs/task1/WRITEUP.md`) plus key figures; Task 2 is marked as not yet done.
 
 ## Where things are
 
