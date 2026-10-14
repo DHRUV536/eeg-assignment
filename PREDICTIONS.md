@@ -85,3 +85,26 @@ Known at this point: mean test accuracy over 37 subjects, all training subjects,
 - **Correlations across the 37 test subjects:** network accuracy correlates with the A3 ocular decoder (ρ ≈ 0.5–0.7) more than with the A2 μ lateralisation index (ρ ≈ 0.2–0.3). With all predictors together, the ocular decoder is the one with a clear unique contribution.
 - **Removal (drop 21 frontal/ocular sites, CAR over the rest, 8–30 Hz):** within-subject checks on the network inputs: slow time-locked amplitude ≈ 72% → ≈ 50%; posterior evoked ≈ 60% → 52–55% (some evoked power lies in 8–20 Hz); sensorimotor mu/beta power unchanged at ≈ 55%.
 - **Retrained networks:** accuracy falls from ~79% to **≈ 58–62% (EEGNet)** and **≈ 55–58% (TF-time)**. What remains correlates more with the A2 μ lateralisation index (ρ ≈ 0.4–0.5) than the full-input models did, i.e. what is left is mostly motor.
+
+### B2.1–B2.4 outcome (added with the results commit; predictions above unchanged)
+**B2.1 scaling** (mean of 37 test subjects; range over 3 seeds):
+
+| training subjects | 5 | 10 | 20 | all (≈ 29.6) |
+|---|---|---|---|---|
+| EEGNet | 76.1% (74.7–76.8) | 77.8% (77.3–78.3) | 78.0% (77.8–78.2) | 79.4% (79.1–79.8) |
+| TF-time | 72.6% (71.5–73.3) | 74.3% (72.3–75.5) | 76.2% (75.6–76.9) | 77.5% (76.2–78.2) |
+
+- No crossover and a shrinking gap (3.5 → 1.9 points): **as predicted**.
+- Levels: **wrong**. I predicted ≈ 60% at 5 subjects; it is 76%. 5 subjects already give 96% of the full-data accuracy. A curve this flat means the signal is almost the same in every subject, which fits the ocular route (one saccade direction, one field pattern), not subject-specific motor ERD.
+
+**B2.2 tokenisation:** TF-time 77.5%, TF-chan-id 73.9% (71.4–75.3), TF-chan-noid 48.2% (48.0–48.4). Ordering and the chance-level no-identity model **as predicted**; the no-identity model cannot even fit its training data (final loss 0.689–0.694 ≈ ln 2). TF-chan-id at 73.9% is **above** the predicted 62–66%: identity embeddings plus attention build the needed left/right contrasts better than I expected.
+
+**B2.3 displacement** (change in accuracy vs no displacement, mean over seeds):
+- 5° lateral: −0.3 to 0.0 points for every model; 15° lateral: EEGNet −2.7, TF-time −2.1, TF-chan-id −1.1, TF-chan-noid −0.3; 15° AP: ≤ −0.8.
+- Lateral > AP: **as predicted**. Size: **wrong**, the 15° lateral drop is 1–3 points, not 5–10. Ranking: **wrong**, TF-chan-id degrades least, not most.
+- Explanation (pattern-level, model-free, `b2_3_pattern_change.csv`): a 10° lateral rotation changes the ocular class-difference topography by 13–14% but the mu topography by 29%. The models read the broad ocular field, which barely moves under a rotation.
+
+**B2.4 reliance (TF-time):**
+- Time: the first 3 of 13 tokens (0–0.9 s) carry 42% of attention and 46% of grad × input (23% of the trial). **As predicted.**
+- Space: 44% of input saliency on the 21 ocular sites (1.35× an even spread), 14% on the 11 sensorimotor channels (0.80×); EEGNet 46% / 14%. **As predicted** in substance; the ρ > 0.5 correlation with the A3 map was **not** found (ρ = 0.18), because the A3 map is under the raw reference and skewed left (D18, D28).
+- Faithfulness: **wrong**. Deleting the top 3 tokens (23%) leaves 54.1% by attention, 68.9% by grad × input, 76.0% at random (no deletion: 77.6%). Attention is the **more** faithful ranking. In a 2-block encoder read out from the CLS token, the last block's CLS update is the attention-weighted sum of the tokens' values, so the attention weights are almost the deletion effect itself; grad × input is a linear estimate of zeroing a token, which the softmax renormalisation and LayerNorm make inaccurate for removal.

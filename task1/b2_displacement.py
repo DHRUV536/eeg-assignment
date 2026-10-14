@@ -270,9 +270,98 @@ def displacement_figure(out_dir: Path):
         ax.axhline(0.5, color=C["ink2"], lw=0.8, ls=":")
         ax.set_title(title, loc="left")
         ax.set_xlabel("cap rotation (deg); 10° ≈ 16 mm at Cz")
+        # Models retrained without the ocular route (B2.5), lateral only.
+        f = out_dir / "b2_3_displacement_no_ocular.csv"
+        if f.exists() and dirs[0] == "left":
+            no = pd.read_csv(f)
+            for m in no.model.unique():
+                pts = []
+                for a in [0.0] + ANGLES:
+                    sub = no[(no.model == m) & ((no.direction == "none") if a == 0 else
+                                                (no.direction.isin(dirs) & (no.angle_deg == a)))]
+                    pts.append(sub.groupby("seed").acc.mean().values)
+                pts = np.array(pts)
+                ax.plot([0.0] + ANGLES, pts.mean(1), color=MODEL_COLORS[m], ls="--", marker="s", ms=3,
+                        label=f"{m}, ocular route removed")
     axes[0].set_ylabel("test accuracy (mean of 37 subjects)")
-    axes[1].legend(loc="lower left", fontsize=8)
+    axes[0].legend(loc="center right", fontsize=7)
+    axes[1].legend(*axes[1].get_legend_handles_labels(), loc="center right", fontsize=7)
     fig.suptitle("B2.3 test-time electrode displacement (band = range over 3 seeds; both signs averaged)",
                  y=1.02)
     fig.savefig(out_dir / "figures" / "b2_3_displacement.png")
     plt.close(fig)
+
+
+def run_displacement_no_ocular(out_dir: Path, seed: int, models=("EEGNet", "TF-time")) -> pd.DataFrame:
+    """Same lateral displacement, applied to the models retrained WITHOUT the
+    ocular route (B2.5). If the full models are robust because they read a
+    broad ocular field, the motor-only models, which must read a focal
+    sensorimotor pattern, should degrade more."""
+    from task1.train import preprocess_variant
+    data = load_net_data(out_dir / "audit.csv", "no_ocular")
+    subjects = kept_subjects(out_dir / "audit.csv")
+    folds = make_folds(np.unique(data["subject"]), seed)
+    ch = list(data["ch_names"]); y, subj = data["y"], data["subject"]
+    fold_of = np.array([folds[int(s)] for s in subj])
+    rows = []
+    for direction, angle in [("none", 0.0)] + [(d, a) for d in ("left", "right") for a in ANGLES]:
+        if direction == "none":
+            X = data["X"]
+        else:
+            M = displacement_matrix(ch, direction, angle)
+            Xs = []
+            for s in subjects:
+                d = load_subject(s)
+                Xd = np.einsum("ij,njt->nit", M, d["X"])
+                Xs.append(preprocess_variant(Xd, d["times"], ch, "no_ocular"))
+            X = np.concatenate(Xs)
+        for m in models:
+            for f in range(N_FOLDS):
+                for sd in SEEDS:
+                    model = load_trained(f"no_ocular|{m}|f{f}|nall|s{sd}", m)
+                    te = fold_of == f
+                    pred = (predict_proba(model, X[te]) >= 0.5).astype(int)
+                    for sj in np.unique(subj[te]):
+                        k = subj[te] == sj
+                        rows.append({"model": m, "fold": f, "seed": sd, "subject": int(sj),
+                                     "direction": direction, "angle_deg": angle,
+                                     "acc": float((pred[k] == y[te][k]).mean())})
+    df = pd.DataFrame(rows)
+    df.to_csv(out_dir / "b2_3_displacement_no_ocular.csv", index=False, float_format="%.4f")
+    return df
+
+
+def pattern_change(out_dir: Path) -> pd.DataFrame:
+    """Signal-side explanation, independent of any model: how much does a
+    cap rotation change the left-minus-right TOPOGRAPHY of each route?
+      ocular  CAR, < 4 Hz amplitude at 0.25-0.6 s (the saccade, A3 R1)
+      mu      CAR, 8-13 Hz log power at 0.5-4 s (motor ERD, A2)
+    Patterns are averaged over subjects; the change is ||M p - p|| / ||p||.
+    A spatially broad pattern changes little under a small rotation; a
+    focal one (opposite-sign peaks a few cm apart) changes a lot."""
+    from task1.a3_confounds import _filt
+    subjects = kept_subjects(out_dir / "audit.csv")
+    pats = {"ocular": [], "mu": []}
+    for s in subjects:
+        d = load_subject(s); t = d["times"]; y = d["y"]
+        X = d["X"] - d["X"].mean(1, keepdims=True)
+        lo = _filt(X, None, 4.0)
+        lo = lo - lo[..., (t >= -0.5) & (t < 0)].mean(-1, keepdims=True)
+        w = (t >= 0.25) & (t <= 0.6)
+        pats["ocular"].append(lo[y == 0][..., w].mean((0, 2)) - lo[y == 1][..., w].mean((0, 2)))
+        mu = np.log((_filt(X, 8, 13)[..., (t >= 0.5)] ** 2).mean(-1))
+        pats["mu"].append(mu[y == 0].mean(0) - mu[y == 1].mean(0))
+    ch = load_subject(subjects[0])["ch_names"]
+    rows = []
+    for name, P in pats.items():
+        p = np.mean(P, axis=0); p = p - p.mean()
+        for direction in DIRECTIONS:
+            for angle in ANGLES:
+                M = displacement_matrix(ch, direction, angle)
+                q = M @ p; q = q - q.mean()
+                rows.append({"pattern": name, "direction": direction, "angle_deg": angle,
+                             "rel_change": float(np.linalg.norm(q - p) / np.linalg.norm(p)),
+                             "corr_with_original": float(np.corrcoef(p, q)[0, 1])})
+    df = pd.DataFrame(rows)
+    df.to_csv(out_dir / "b2_3_pattern_change.csv", index=False, float_format="%.4f")
+    return df

@@ -148,7 +148,8 @@ def reliance_figures(out_dir: Path, model_name: str):
         per_seed = sub.groupby(["frac", "seed"]).acc.mean().unstack()          # mean over folds
         x = per_seed.index.values
         ax.fill_between(x, per_seed.min(1), per_seed.max(1), color=col, alpha=0.2, lw=0)
-        ax.plot(x, per_seed.mean(1), color=col, marker="o", ms=3, label=name.replace("_", " × "))
+        ax.plot(x, per_seed.mean(1), color=col, marker="o", ms=3,
+                label={"attention": "attention", "grad_x_input": "grad × input", "random": "random"}[name])
     ax.axhline(0.5, color=C["ink2"], lw=0.8, ls=":")
     ax.set_xlabel("fraction of tokens deleted"); ax.set_ylabel("test accuracy")
     ax.set_title(f"Deletion test, {model_name}", loc="left"); ax.legend(fontsize=8)
@@ -187,3 +188,26 @@ def saliency_all_models(out_dir: Path, seed: int, model_names):
         pd.DataFrame({"channel": data["ch_names"], "saliency": np.mean(maps, axis=0)}).to_csv(
             out_dir / f"b2_4_channel_saliency_{m}.csv", index=False, float_format="%.5f")
         np.save(out_dir.parents[1] / "cache" / f"b2_4_time_saliency_{m}.npy", np.mean(tmaps, axis=0))
+
+
+def saliency_shares(out_dir: Path, model_names) -> pd.DataFrame:
+    """Share of each model's input saliency on the ocular sites (the 21
+    channels B2.5 removes) and on the 11 A2 sensorimotor channels, divided by
+    the share those channels would get if saliency were spread evenly. The
+    A3 single-channel maps are not used for this comparison because they
+    were computed under the raw reference, which skews the ocular map to the
+    left (D18), whereas the networks see CAR data."""
+    from task1.a2_erd import TF_CHANNELS
+    from task1.train import OCULAR_SITES
+    rows = []
+    for m in model_names:
+        sal = pd.read_csv(out_dir / f"b2_4_channel_saliency_{m}.csv").set_index("channel").saliency
+        sal = sal / sal.sum()
+        for name, chans in (("ocular_sites", OCULAR_SITES), ("sensorimotor", TF_CHANNELS)):
+            share = sal[chans].sum()
+            rows.append({"model": m, "region": name, "n_channels": len(chans), "saliency_share": share,
+                         "enrichment_vs_uniform": share / (len(chans) / len(sal)),
+                         "top8_channels": " ".join(sal.sort_values(ascending=False).index[:8])})
+    df = pd.DataFrame(rows)
+    df.to_csv(out_dir / "b2_4_saliency_shares.csv", index=False, float_format="%.3f")
+    return df

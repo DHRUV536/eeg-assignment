@@ -121,10 +121,10 @@ def route_features(d: dict, route: dict, Xref: dict) -> np.ndarray:
     return np.concatenate(feats, axis=1)
 
 
-def cv_accuracy(F: np.ndarray, y: np.ndarray, seed: int) -> float:
+def cv_accuracy(F: np.ndarray, y: np.ndarray, seed: int, n_repeats: int = N_REPEATS) -> float:
     clf = make_pipeline(StandardScaler(), LinearDiscriminantAnalysis(solver="lsqr", shrinkage="auto"))
-    cv = RepeatedStratifiedKFold(n_splits=N_SPLITS, n_repeats=N_REPEATS, random_state=seed)
-    correct = np.zeros(N_REPEATS)
+    cv = RepeatedStratifiedKFold(n_splits=N_SPLITS, n_repeats=n_repeats, random_state=seed)
+    correct = np.zeros(n_repeats)
     for i, (tr, te) in enumerate(cv.split(F, y)):
         clf.fit(F[tr], y[tr])
         correct[i // N_SPLITS] += (clf.predict(F[te]) == y[te]).sum()

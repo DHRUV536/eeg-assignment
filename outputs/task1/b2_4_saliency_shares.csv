@@ -1,0 +1,9 @@
+model,region,n_channels,saliency_share,enrichment_vs_uniform,top8_channels
+EEGNet,ocular_sites,21,0.458,1.396,AF8 F7 T10 AF7 FT8 FT7 F8 F5
+EEGNet,sensorimotor,11,0.142,0.828,AF8 F7 T10 AF7 FT8 FT7 F8 F5
+TF-time,ocular_sites,21,0.443,1.350,F7 AF8 AF7 FT7 T10 F8 F5 FT8
+TF-time,sensorimotor,11,0.138,0.801,F7 AF8 AF7 FT7 T10 F8 F5 FT8
+TF-chan-id,ocular_sites,21,0.399,1.217,FT7 FT8 FC6 FC5 F7 T8 C3 F8
+TF-chan-id,sensorimotor,11,0.185,1.078,FT7 FT8 FC6 FC5 F7 T8 C3 F8
+TF-chan-noid,ocular_sites,21,0.333,1.015,FC1 FCz FC4 FC2 FC5 FC3 FC6 Fz
+TF-chan-noid,sensorimotor,11,0.175,1.020,FC1 FCz FC4 FC2 FC5 FC3 FC6 Fz

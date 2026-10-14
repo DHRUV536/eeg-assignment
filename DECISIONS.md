@@ -202,3 +202,22 @@ Unchanged: F1 = 8, D = 2, F2 = 16, second pool 8, dropout 0.5 (the paper's cross
 
 ### D25. Seeds
 - Run seed = project seed + 100 × seed index + fold; seed index ∈ {0, 1, 2}. The seed sets weight initialisation, batch sampling and, in B2.1, which training subjects are drawn. Training subsets are nested (5 ⊂ 10 ⊂ 20 ⊂ all) per (fold, seed), and EEGNet and the transformer get the same subjects.
+
+### D26. Displacement: rigid cap rotation, 0–15°, both axes and both signs
+- **Choice:** rotate all 64 positions together on the fitted head sphere by 2.5, 5, 10, 15° (3.9, 7.9, 15.7, 23.6 mm of arc at Cz for a 9 cm radius), towards each ear (lateral) and towards nose/back (AP); report the two signs of each axis averaged, plus each sign separately in `b2_3_displacement.csv`.
+- **Size justification:** across 20 participants, electrode placement varied with SD 3.9 mm (left–right), 5.6 mm (front–back) and 7.2 mm (vertical) ("Variability of EEG electrode positions and their underlying brain regions", *Brain and Behavior*, 2022). 2.5–5° is routine variation; 10–15° (≈ 2–4 SD) is a clearly misplaced cap.
+- **Alternatives:** independent per-electrode jitter; a translation of the whole cap.
+- **Why:** a cap moves as one piece, so a rigid rotation is the physically plausible error; independent jitter would mostly add spatial noise.
+- **With the alternatives:** jitter of the same RMS size would hurt less, because it doesn't shift the left/right balance coherently.
+
+### D27. Spherical-spline regularisation λ = 1e-9 (not MNE's 1e-5)
+- **Found:** with MNE's default λ = 1e-5, interpolating the 64 channels **onto themselves** (0°) gives max |M − I| = 0.67; each channel keeps only 39% of its own signal. Every "displacement" would then include a large smoothing that has nothing to do with misplacement.
+- **Choice:** λ = 1e-9: 0° map is the identity (max |M − I| = 0.004); at 10° the worst-case channel gain is 1.86 (edge electrodes rotated past the cap edge) and total signal power is preserved within 3%; a smooth test field is reproduced to 2e-4.
+- **Implementation:** Perrin et al. (1989), m = 4, 50 Legendre terms; checked against `mne.channels.interpolation._make_interpolation_matrix` (identical at equal λ).
+
+### D28. Attribution: token-level gradient × input; deletion by removing tokens
+- **Choice:** score_t = |Σ_d e_t,d · ∂(logit_pred − logit_other)/∂e_t,d| on the token embeddings (incl. positional encoding), from all 15 TF-time models on their own test folds; deletion removes tokens from the sequence (the encoder handles any length), ranks recomputed per trial; random baseline = 5 random orders per trial.
+- **Alternatives:** integrated gradients; replacing tokens with zeros or a mean token.
+- **Why:** gradient × input is the simplest gradient-based token score and has the same token granularity as attention; removal avoids feeding the model an out-of-distribution placeholder.
+- **Known mismatch (see B2.4 outcome):** gradient × input estimates the effect of **zeroing** a token linearly, while the test **removes** it; the two differ through the softmax renormalisation and LayerNorm.
+- **Saliency maps for Part A:** input-level |gradient × input| per electrode, normalised per trial; summarised as the share on the 21 ocular sites and on the 11 A2 sensorimotor channels relative to an even spread (`b2_4_saliency_shares.csv`). The A3 single-channel maps are not used for this, because they were computed under the raw reference, which skews the ocular map to the left (D18).

@@ -72,7 +72,9 @@ def _input_routes(X, ch_names):
     t = np.arange(X.shape[-1]) / SFREQ
     out = {}
     # slow time-locked amplitude, all channels (eye movement / eye position)
-    edges = np.arange(0, 4.0001, 0.5)
+    # 1 s bins keep this at 4 x 64 features: the saccade and the eye-position
+    # shift last ~1 s, and 512 features made the shrinkage LDA very slow.
+    edges = np.arange(0, 4.0001, 1.0)
     out["slow_amplitude_all_ch"] = np.concatenate(
         [X[..., (t >= a) & (t < b)].mean(-1) for a, b in zip(edges[:-1], edges[1:])], axis=1)
     # early posterior evoked response
@@ -100,7 +102,7 @@ def removal_check(out_dir: Path, seed: int) -> pd.DataFrame:
             for name, F in feats.items():
                 F = np.nan_to_num(F)
                 rows.append({"variant": variant, "subject": int(s), "route": name,
-                             "acc": cv_accuracy(F, d["y"][k], seed + int(s))})
+                             "acc": cv_accuracy(F, d["y"][k], seed + int(s), n_repeats=3)})
     df = pd.DataFrame(rows)
     df.to_csv(out_dir / "b2_5_removal_check.csv", index=False, float_format="%.4f")
     return df
@@ -113,7 +115,8 @@ def run_no_ocular_training(out_dir: Path, seed: int, models):
     for m in models:
         for s in SEEDS:
             for f in range(N_FOLDS):
-                runner.run("no_ocular", m, f, None, s, tag="", save_weights=False)
+                # weights kept: B2.3 re-tests displacement on these motor-only models
+                runner.run("no_ocular", m, f, None, s, tag="", save_weights=True)
 
 
 def link_figure(out_dir: Path, models):
