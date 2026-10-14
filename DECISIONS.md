@@ -221,3 +221,15 @@ Unchanged: F1 = 8, D = 2, F2 = 16, second pool 8, dropout 0.5 (the paper's cross
 - **Why:** gradient × input is the simplest gradient-based token score and has the same token granularity as attention; removal avoids feeding the model an out-of-distribution placeholder.
 - **Known mismatch (see B2.4 outcome):** gradient × input estimates the effect of **zeroing** a token linearly, while the test **removes** it; the two differ through the softmax renormalisation and LayerNorm.
 - **Saliency maps for Part A:** input-level |gradient × input| per electrode, normalised per trial; summarised as the share on the 21 ocular sites and on the 11 A2 sensorimotor channels relative to an even spread (`b2_4_saliency_shares.csv`). The A3 single-channel maps are not used for this, because they were computed under the raw reference, which skews the ocular map to the left (D18).
+
+### D29. Removing the dominant confound (ocular): drop frontal sites + CAR over the rest + 8–30 Hz
+- **Choice:** set the 21 Fp/AF/F-row sites plus FT7/FT8/T9/T10 to zero, re-reference to the average of the remaining 43 channels, band-pass 8–30 Hz on the whole −2 to 4 s trial, then the usual crop/resample/scale (`train.preprocess_variant`). Same folds, seeds and training length as the main runs.
+- **Alternatives:** (a) regress EOG proxies (F7−F8, Fp mean) out of every channel; (b) ICA; (c) only one of channel removal or band-pass.
+- **Why:** there are no EOG channels, so regression would need coefficients estimated from the test subject's own data (a normalisation statistic, forbidden) or transferred from training subjects (poor fit, since the reference geometry differs, D18). ICA needs per-subject fits on test data for the same reason. Removing sites alone leaves the eye signal volume-conducted to central channels below 4 Hz; band-pass alone leaves saccadic spike potentials and the frontal 8–30 Hz content. Together they close the route.
+- **Verified on the network inputs** (within-subject LDA, `b2_5_removal_check.csv`): slow time-locked amplitude (all channels) 73.1% → 49.3%; posterior evoked 61.3% → 49.1%; sensorimotor mu/beta power 61.7% → 62.1%. The method removes what it targets and leaves the motor features untouched.
+- **What it cannot remove:** small covert hand movements during "imagery" produce sensorimotor ERD indistinguishable from imagery without EMG; the networks never see > 40 Hz, so the A3 EMG route is closed to them but not ruled out as a behaviour.
+
+### D30. B2.6 intervention: per-channel pre-cue normalisation inside each trial
+- **Choice:** in the ocular-removed input, divide each channel by its own 8–30 Hz RMS over −1.5 to −0.5 s of the same trial (`no_ocular_erdnorm`), so the network sees ERD (log power change from baseline), not absolute power. Rationale and maths in PREDICTIONS.md (B2.6).
+- **Alternatives:** Euclidean alignment / per-subject covariance whitening; a sweep of architectures or band limits.
+- **Why:** alignment methods need statistics over the test subject's trials (forbidden here); a sweep would not test a mechanism. This change targets the one quantity A2 identified as the motor signal.

@@ -131,9 +131,16 @@ def link_figure(out_dir: Path, models):
             r = stats.spearmanr(acc[m], table[p]).statistic
             ax.scatter(table[p], acc[m], s=16, color=MODEL_COLORS[m], edgecolor="white", lw=0.6,
                        label=f"{m} (ρ = {r:+.2f})", zorder=3)
+        if p == "LI_mu_db" and acc_no is not None:
+            for m in models:
+                if m in acc_no:
+                    r = stats.spearmanr(acc_no[m], table.loc[acc_no.index, p]).statistic
+                    ax.scatter(table.loc[acc_no.index, p], acc_no[m], s=18, facecolor="none",
+                               edgecolor=MODEL_COLORS[m], marker="s", lw=1, zorder=3,
+                               label=f"{m}, ocular removed (ρ = {r:+.2f})")
         ax.set_xlabel(lab); ax.set_ylabel("network test accuracy (mean of 3 seeds)")
         ax.axhline(0.5, color=C["ink2"], lw=0.8, ls=":")
-        ax.legend(fontsize=8, loc="lower right")
+        ax.legend(fontsize=7, loc="upper right" if p == "LI_mu_db" else "lower right")
     axes[0].set_title("Per test subject: network vs Part A", loc="left")
     ax = axes[2]
     if acc_no is not None:

@@ -284,8 +284,9 @@ def displacement_figure(out_dir: Path):
                 ax.plot([0.0] + ANGLES, pts.mean(1), color=MODEL_COLORS[m], ls="--", marker="s", ms=3,
                         label=f"{m}, ocular route removed")
     axes[0].set_ylabel("test accuracy (mean of 37 subjects)")
-    axes[0].legend(loc="center right", fontsize=7)
-    axes[1].legend(*axes[1].get_legend_handles_labels(), loc="center right", fontsize=7)
+    # One shared legend below both panels, so no line is covered.
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=3, fontsize=8, bbox_to_anchor=(0.5, -0.2))
     fig.suptitle("B2.3 test-time electrode displacement (band = range over 3 seeds; both signs averaged)",
                  y=1.02)
     fig.savefig(out_dir / "figures" / "b2_3_displacement.png")

@@ -125,3 +125,20 @@ For any band power P the network computes from channel c, log P̃_c = log P_c(po
 **Cost:** the baseline is only 1 s, so σ_c is noisy (relative SE ≈ 1/√(2 · 22 Hz · 1 s) ≈ 15%, ≈ 0.6 dB in power). That is comparable to the per-trial ERD, so per-trial noise rises while the cross-subject offsets are removed.
 
 **Prediction:** relative to the ocular-removed baseline (EEGNet 60.7%), the intervention **improves** accuracy by **+2 to +4 points** for EEGNet (→ ≈ 63–65%) and by a similar amount for TF-time. The gain is concentrated in A2 "present" subjects (where an ERD exists to be normalised), and the correlation with the A2 μ index stays the same or rises.
+
+### B2.5 outcome (added with the results commit)
+- Correlations (full-input models, n = 37): EEGNet accuracy vs A3 ocular decoder ρ = **0.74** (p = 1e-7), vs A2 μ index ρ = 0.07; TF-time 0.73 vs 0.28. Joint model: ocular is the only significant predictor (EEGNet β = 0.113 per SD, p = 1e-6, R² = 0.67; TF-time p = 6e-5, R² = 0.62). **As predicted**, slightly stronger.
+- Removal check on the network inputs: slow amplitude 73.1% → 49.3%, posterior evoked 61.3% → 49.1%, sensorimotor mu/beta 61.7% → 62.1%. **As predicted** (posterior evoked fell further than predicted).
+- Retrained without the ocular route: EEGNet **60.7%** (60.3–61.4), TF-time **58.9%** (57.3–61.2). EEGNet **as predicted** (58–62%); TF-time slightly above its predicted 55–58%. Three of TF-time's 15 runs ended with training loss ≈ 0.69 (they did not learn the weak remaining signal in 500 steps); they are included.
+- What remains follows the A2 μ index: ρ = 0.55 (EEGNet, p = 4e-4) and 0.53 (TF-time); 65.0% vs 56.7% (EEGNet) in A2 "present" vs "absent" subjects. **As predicted**, slightly stronger.
+- Extra (B2.3 follow-up): the ocular-removed models lose 1.4 (EEGNet) / 0.8 (TF-time) points at 15° lateral displacement, i.e. 13% / 9% of their margin above chance vs 9% / 8% for the full models: only slightly more sensitive, not ~2× as the topography change (29% vs 14%) suggested.
+
+### B2.6 outcome (added with the results commit)
+| | ocular removed (B2.5) | + per-channel baseline normalisation | Δ | subjects improved | Wilcoxon p |
+|---|---|---|---|---|---|
+| EEGNet | 60.7% | 59.0% (58.0–60.3) | −1.7 | 11/37 | 0.055 |
+| TF-time | 58.9% | 57.3% (56.4–58.8) | −1.6 | 12/37 | 0.093 |
+
+- **Wrong.** I predicted +2 to +4 points; accuracy fell by ~1.7 for both models. The part about correlations was right: ρ with the A2 μ index rose (EEGNet 0.55 → 0.59, TF-time 0.53 → 0.60), and for TF-time the loss sits entirely in A2 "absent" subjects (present +0.2, absent −3.3 points).
+- **Why.** The cost I noted in the prediction is larger than the benefit. σ_c comes from 1 s of 8–30 Hz signal: about 2·22·1 = 44 degrees of freedom, so the power estimate has relative SD ≈ √(2/44) ≈ 21%, ≈ 0.9 dB, **independently at every channel**. The left/right contrast is a difference between channels (C3 vs C4), so it receives ≈ 0.9·√2 ≈ 1.3 dB of new noise per trial, while the per-trial lateralisation it should reveal is of the order of 1 dB (A2 median μ LI 0.74 dB under CSD, smaller under CAR). Meanwhile the trial-wide scalar it replaced was estimated from 43 channels × 4 s and is nearly noise-free, and the gain differences it was meant to remove largely cancel already when the network compares neighbouring channels. In subjects with clear ERD the two effects roughly balance (no change); in subjects without ERD only the noise remains, so accuracy drops there.
+- **What would fix it:** a lower-variance baseline (the whole 4.1 s rest period, or a log-power baseline smoothed over neighbouring channels) would cut the noise by ~2× while keeping the per-trial ERD normalisation.
