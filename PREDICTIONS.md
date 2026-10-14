@@ -69,3 +69,19 @@ Already known: A3 (ocular route 72% within-subject, motor route 55%), training-l
 - **Prediction:** lateral shifts hurt more than AP shifts, because they break left/right symmetry: a lateral shift makes the electrodes on one side sample the EOG and the motor cortex differently from the other, which looks like a class difference and pushes predictions towards one class. For 5° (~8 mm, a typical placement error) the drop is small (≤ 3 points); at 15° lateral, 5–10 points. AP shifts cost ≤ 3 points even at 15°.
 - **By model:** EEGNet and TF-time degrade similarly (both have one learned 64-weight spatial filter per map). TF-chan-id degrades at least as much, since its identity embeddings are tied to electrode indices whose content has moved. TF-chan-noid stays flat at chance.
 - **Responsible weights:** the first spatial weights (EEGNet `conv_spatial`, TF-time `conv_spatial`, TF-chan-id `id_embed`). The smoother the learned spatial pattern, the smaller the drop; a model relying on a broad ocular field should be more robust than one relying on a focal central (Laplacian-like) pattern.
+
+---
+
+## B2.4–B2.5 (written after the B2.2 main runs finished; before any attribution, deletion, correlation or retraining)
+Known at this point: mean test accuracy over 37 subjects, all training subjects, 3 seeds: EEGNet 79.4%, TF-time 77.5%, TF-chan-id 73.9%, TF-chan-noid 48.2%. So **TF-time is the best transformer** and is the B2.4 model. Scaling and displacement results were not yet available.
+
+### B2.4 What TF-time relies on
+- **Time:** grad × input importance peaks in the tokens covering **0.3–0.9 s** after the cue (the saccade toward the target; the F7−F8 class difference peaks at 0.4 s in A3) and falls off over later tokens. Attention is flatter over time than grad × input.
+- **Space (input-level grad × input):** concentrated at lateral frontal/temporal sites (F7, F8, FT7, FT8, AF7, AF8, T7, T8). Its rank correlation with the A3 ocular (< 4 Hz) map is **positive (ρ > 0.5)**, and its correlation with the A3 mu/beta map is near zero.
+- **Faithfulness:** deleting the top grad × input tokens hurts more than deleting random tokens; deleting the top 2 of 13 (15%) costs ≥ 10 points vs ≤ 3 points for 2 random tokens. Attention ranking is less faithful than grad × input, closer to random, because last-layer CLS attention reflects routing, not the size of each token's effect on the logit.
+- **Mapping to Part A:** the model relies mainly on the A3 ocular route, not on sensorimotor ERD.
+
+### B2.5 Link to Part A, and retraining without the ocular route
+- **Correlations across the 37 test subjects:** network accuracy correlates with the A3 ocular decoder (ρ ≈ 0.5–0.7) more than with the A2 μ lateralisation index (ρ ≈ 0.2–0.3). With all predictors together, the ocular decoder is the one with a clear unique contribution.
+- **Removal (drop 21 frontal/ocular sites, CAR over the rest, 8–30 Hz):** within-subject checks on the network inputs: slow time-locked amplitude ≈ 72% → ≈ 50%; posterior evoked ≈ 60% → 52–55% (some evoked power lies in 8–20 Hz); sensorimotor mu/beta power unchanged at ≈ 55%.
+- **Retrained networks:** accuracy falls from ~79% to **≈ 58–62% (EEGNet)** and **≈ 55–58% (TF-time)**. What remains correlates more with the A2 μ lateralisation index (ρ ≈ 0.4–0.5) than the full-input models did, i.e. what is left is mostly motor.

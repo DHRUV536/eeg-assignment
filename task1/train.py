@@ -61,15 +61,59 @@ def preprocess(X160: np.ndarray, times160: np.ndarray) -> np.ndarray:
     return X.astype(np.float32)
 
 
-def load_net_data(audit_csv: Path) -> dict:
-    cache = CACHE / "net_inputs.npz"
+# B2.5: the ocular route removed. Channels on the forehead and lateral-frontal
+# sites where A3 found the eye signal (a3_channel_topography.csv), plus T9/T10
+# below them. Everything from the FC row backwards is kept.
+OCULAR_SITES = ["Fp1", "Fpz", "Fp2", "AF7", "AF3", "AFz", "AF4", "AF8", "F7", "F5", "F3", "F1",
+                "Fz", "F2", "F4", "F6", "F8", "FT7", "FT8", "T9", "T10"]
+MOTOR_BAND = (8.0, 30.0)
+ERD_BASELINE = (-1.5, -0.5)
+
+
+def preprocess_variant(X160: np.ndarray, times160: np.ndarray, ch_names, variant: str) -> np.ndarray:
+    """Network input with the ocular route removed (B2.5) and, optionally,
+    each channel expressed relative to its own pre-cue power (B2.6).
+
+    no_ocular:   drop OCULAR_SITES, CAR over the remaining 43 channels (so the
+                 average no longer carries frontal EOG into every channel),
+                 band-pass 8-30 Hz (removes the < 4 Hz saccade/eye-position
+                 signal and most of the visual evoked response's power), then
+                 crop / resample / per-trial scale as in `preprocess`. Dropped
+                 channels are fed as zeros so the architectures are unchanged.
+    no_ocular_erdnorm: as no_ocular, but each channel is divided by its own
+                 8-30 Hz RMS in the pre-cue baseline (-1.5 to -0.5 s) of the
+                 SAME trial instead of the trial-wide scalar (see D29).
+    """
+    from scipy.signal import butter, sosfiltfilt
+    keep = np.array([c not in OCULAR_SITES for c in ch_names])
+    X = X160.astype(np.float64).copy()
+    X[:, keep] -= X[:, keep].mean(axis=1, keepdims=True)
+    X[:, ~keep] = 0.0
+    sos = butter(4, MOTOR_BAND, btype="bandpass", fs=160.0, output="sos")
+    # filter the whole -2..4 s trial, then crop: keeps filter edges out of the window
+    X[:, keep] = sosfiltfilt(sos, X[:, keep], axis=-1)
+    if variant == "no_ocular_erdnorm":
+        b = (times160 >= ERD_BASELINE[0]) & (times160 <= ERD_BASELINE[1])
+        rms = np.sqrt((X[:, keep][..., b] ** 2).mean(-1, keepdims=True))
+        X[:, keep] = X[:, keep] / rms
+    X = X[..., times160 >= 0.0]
+    X = mne.filter.resample(X, down=160 / NET_SFREQ, axis=-1, verbose="error")[..., :N_TIMES]
+    if variant == "no_ocular":
+        X = X / X[:, keep].std(axis=(1, 2), keepdims=True)
+    return X.astype(np.float32)
+
+
+def load_net_data(audit_csv: Path, variant: str = "default") -> dict:
+    cache = CACHE / ("net_inputs.npz" if variant == "default" else f"net_inputs_{variant}.npz")
     if cache.exists():
         d = np.load(cache)
         return {k: d[k] for k in d.files}
     Xs, ys, ss = [], [], []
     for s in kept_subjects(audit_csv):
         d = load_subject(s)
-        Xs.append(preprocess(d["X"], d["times"])); ys.append(d["y"]); ss.append(np.full(len(d["y"]), s))
+        X = (preprocess(d["X"], d["times"]) if variant == "default"
+             else preprocess_variant(d["X"], d["times"], list(d["ch_names"]), variant))
+        Xs.append(X); ys.append(d["y"]); ss.append(np.full(len(d["y"]), s))
     out = {"X": np.concatenate(Xs), "y": np.concatenate(ys), "subject": np.concatenate(ss),
            "ch_names": d["ch_names"]}
     CACHE.mkdir(exist_ok=True)
