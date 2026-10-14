@@ -41,3 +41,35 @@ def run_intervention(out_dir: Path, seed: int, models):
         for s in SEEDS:
             for f in range(N_FOLDS):
                 runner.run("erd_norm", m, f, None, s)
+
+
+def intervention_summary(out_dir: Path):
+    """B2.6 vs its baseline (B2.5 ocular-removed runs), per seed and per A2 label."""
+    import pandas as pd
+    from scipy import stats
+    base = pd.read_csv(out_dir / "b2_5_runs.csv")
+    new = pd.read_csv(out_dir / "b2_6_runs.csv")
+    a2 = pd.read_csv(out_dir / "per_subject_table.csv").set_index("subject")
+    rows = []
+    for m in new.model.unique():
+        b = base[base.model == m].groupby(["seed", "subject"]).acc.mean()
+        n = new[new.model == m].groupby(["seed", "subject"]).acc.mean()
+        d = (n - b).dropna()
+        per_subject = d.groupby("subject").mean()
+        lab = a2.loc[per_subject.index, "lateralised_ERD"]
+        w = stats.wilcoxon(per_subject)
+        rho_b = stats.spearmanr(b.groupby("subject").mean(), a2.loc[per_subject.index, "LI_mu_db"]).statistic
+        rho_n = stats.spearmanr(n.groupby("subject").mean(), a2.loc[per_subject.index, "LI_mu_db"]).statistic
+        for s in sorted(d.index.get_level_values("seed").unique()):
+            rows.append({"model": m, "seed": s, "baseline_acc": b.xs(s, level="seed").mean(),
+                         "intervention_acc": n.xs(s, level="seed").mean()})
+        rows.append({"model": m, "seed": "mean", "baseline_acc": b.groupby("seed").mean().mean(),
+                     "intervention_acc": n.groupby("seed").mean().mean(),
+                     "delta_present": per_subject[lab == "present"].mean(),
+                     "delta_absent": per_subject[lab == "absent"].mean(),
+                     "n_subjects_improved": int((per_subject > 0).sum()),
+                     "wilcoxon_p_subject_deltas": w.pvalue,
+                     "rho_LI_mu_baseline": rho_b, "rho_LI_mu_intervention": rho_n})
+    df = pd.DataFrame(rows)
+    df.to_csv(out_dir / "b2_6_intervention.csv", index=False, float_format="%.4f")
+    return df

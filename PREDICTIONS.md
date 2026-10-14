@@ -108,3 +108,20 @@ Known at this point: mean test accuracy over 37 subjects, all training subjects,
 - Time: the first 3 of 13 tokens (0–0.9 s) carry 42% of attention and 46% of grad × input (23% of the trial). **As predicted.**
 - Space: 44% of input saliency on the 21 ocular sites (1.35× an even spread), 14% on the 11 sensorimotor channels (0.80×); EEGNet 46% / 14%. **As predicted** in substance; the ρ > 0.5 correlation with the A3 map was **not** found (ρ = 0.18), because the A3 map is under the raw reference and skewed left (D18, D28).
 - Faithfulness: **wrong**. Deleting the top 3 tokens (23%) leaves 54.1% by attention, 68.9% by grad × input, 76.0% at random (no deletion: 77.6%). Attention is the **more** faithful ranking. In a 2-block encoder read out from the CLS token, the last block's CLS update is the attention-weighted sum of the tokens' values, so the attention weights are almost the deletion effect itself; grad × input is a linear estimate of zeroing a token, which the softmax renormalisation and LayerNorm make inaccurate for removal.
+
+---
+
+## B2.6 One intervention (written after B2.1–B2.4 results and the EEGNet half of the B2.5 retraining; before any B2.6 run)
+Known at this point: with the ocular route removed (21 frontal sites dropped, 8–30 Hz), EEGNet falls to 60.7% (seeds 60.3–61.4%). Its per-subject accuracy now follows the A2 μ index (ρ = 0.55) and the A3 motor decoder (ρ = 0.47), not the ocular decoder (ρ = 0.21): 65.0% in subjects A2 labels "present" vs 56.7% "absent". TF-time's ocular-removed runs were still training.
+
+**Mechanism identified.** Once the eyes are gone, the only transferable signal is mu/beta power at sensorimotor sites. Imagery changes that power **relative to the subject's own resting level** (ERD), but the network sees only the post-cue window scaled by one scalar per trial, so it must infer ERD from **absolute** power. Absolute power at each electrode differs between people for reasons unrelated to imagery (mu-rhythm strength, skull thickness, impedance, the undocumented reference), and these differences don't transfer across subjects.
+
+**Intervention: per-channel baseline normalisation inside each trial.** After the 8–30 Hz band-pass, divide every channel by its own RMS over −1.5 to −0.5 s in the same trial (`preprocess_variant(..., "no_ocular_erdnorm")`):
+
+  x̃_c(t) = x_c(t) / σ_c,  σ_c = RMS(x_c over the baseline).
+
+For any band power P the network computes from channel c, log P̃_c = log P_c(post) − log P_c(pre) = ERD_c, which is exactly the quantity A2 shows lateralising with the imagined hand. A per-subject, per-electrode gain g_c cancels: (g_c x_c)/(g_c σ_c) = x_c/σ_c. It uses only the trial itself (no cross-trial statistics), and the band-limited baseline carries power, not the polarity of the slow eye-position signal (A3 R5_precue_ocular). The A3 pre-cue power decoder was at chance (48%), so the baseline itself carries no class information.
+
+**Cost:** the baseline is only 1 s, so σ_c is noisy (relative SE ≈ 1/√(2 · 22 Hz · 1 s) ≈ 15%, ≈ 0.6 dB in power). That is comparable to the per-trial ERD, so per-trial noise rises while the cross-subject offsets are removed.
+
+**Prediction:** relative to the ocular-removed baseline (EEGNet 60.7%), the intervention **improves** accuracy by **+2 to +4 points** for EEGNet (→ ≈ 63–65%) and by a similar amount for TF-time. The gain is concentrated in A2 "present" subjects (where an ERD exists to be normalised), and the correlation with the A2 μ index stays the same or rises.
