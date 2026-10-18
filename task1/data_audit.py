@@ -74,6 +74,11 @@ SUBJECT_DECISIONS: dict[int, tuple[str, str]] = {
     97: ("keep_interp", "AF7 near-flat in runs 4/12; interpolate (frontal, A3 ocular-decoder caveat)."),
     105: ("keep_interp", "FC5 and FC1 near-flat in all runs; interpolate. Both are C3 neighbours, "
                          "so the C3 Laplacian/CSD for this subject leans on interpolated values."),
+    # Cue annotations of 4.0 s (vs 4.1 s) shift the run so its last cue sits a few samples
+    # too close to the end of the file for the -2.0..4.0 s window: that one trial is lost.
+    **{s: ("keep_partial", "Last cue of some runs ends <0.1 s before the file does, so its "
+                           "-2..4 s window does not fit; only those trials are dropped.")
+       for s in (72, 73, 74, 76, 102)},
     104: ("keep_partial", "Run 8 is truncated (~106 s instead of 123 s). Trials whose analysis "
                           "window is fully inside the recording are kept; the rest of the "
                           "subject's data is normal."),
@@ -123,7 +128,10 @@ def audit_run(subject: int, run: int) -> dict:
 
     # A trial is usable if the whole analysis window fits in the recording.
     t0, t1 = TRIAL_WINDOW
-    fits = (onset + t0 >= 0) & (onset + t1 <= dur)
+    # The last sample is at (n_times - 1) / sf, not n_times / sf: mne.Epochs drops a trial
+    # whose window needs even one sample past it, so count it the same way.
+    last_t = (raw.n_times - 1) / sf
+    fits = (onset + t0 >= 0) & (onset + t1 <= last_t + 1e-9)
     usable_left = int(np.sum(fits & (desc == "T1")))
     usable_right = int(np.sum(fits & (desc == "T2")))
 

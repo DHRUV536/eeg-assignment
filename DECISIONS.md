@@ -12,7 +12,7 @@ Format: **choice** / alternative / why / what would change with the alternative.
 
 **D4. Interpolate single dead/noisy channels (S079 Fp1/P1, S086 Fp1, S097 AF7, S105 FC5/FC1).** Detection: channel std < 0.2x or > 5x the run median. / Exclude the subject, or drop the channel everywhere. / A fixed 64-channel layout is needed by CSD (A2) and the networks (B); one bad electrode is not a reason to lose a subject. / Caveats: Fp1/AF7 feed the A3 ocular decoder; FC5/FC1 are C3 neighbours, so S105's C3 Laplacian partly uses interpolated data.
 
-**D5. Annotation lengths of 4.0/4.15 s (S072-74, 76, 89, 102) treated as benign.** / Flag as anomalous. / A ≤0.1 s rounding of cue length; our window ends at 4.0 s. / None.
+**D5. Annotation lengths of 4.0/4.15 s (S072-74, 76, 89, 102) treated as benign; in S072/73/74/76/102 the last cue of some runs then ends a few samples before the file does, so its −2..4 s window does not fit and that trial is dropped (13 trials in total; 827 left / 822 right kept).** / Shorten the window for those subjects, or pad. / A ≤0.1 s rounding of cue length; one trial per run is not worth a subject-specific window. The audit's fit check counts the last sample the same way `mne.Epochs` does (fixed after Part B's loader found 13 fewer trials than the first audit reported). / A shorter window everywhere would recover 13 trials and lose 0.1 s of imagery from all 1649.
 
 **D6. Trial window −2.0 to 4.0 s.** / −1.5 to 4.5 s. / The last cue of each run is 4.1 s from the end of the file, so tmax > 4.0 drops 3 trials per subject; the extra 0.5 s before the baseline absorbs wavelet edge effects.
 
