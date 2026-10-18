@@ -1,9 +1,0 @@
-model,seed,baseline_acc,intervention_acc,delta_present,delta_absent,n_subjects_improved,wilcoxon_p_subject_deltas,rho_LI_mu_baseline,rho_LI_mu_intervention
-EEGNet,0,0.6142,0.5800,,,,,,
-EEGNet,1,0.6034,0.6034,,,,,,
-EEGNet,2,0.6039,0.5878,,,,,,
-EEGNet,mean,0.6072,0.5904,-0.0165,-0.0170,11.0000,0.0553,0.5511,0.5896
-TF-time,0,0.6118,0.5878,,,,,,
-TF-time,1,0.5818,0.5644,,,,,,
-TF-time,2,0.5735,0.5662,,,,,,
-TF-time,mean,0.5890,0.5728,0.0016,-0.0331,12.0000,0.0927,0.5340,0.5996
