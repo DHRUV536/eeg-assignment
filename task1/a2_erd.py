@@ -1,245 +1,302 @@
-"""
-A2 - Physiological ground truth: cue-locked mu/beta ERD at C3/C4 and neighbours.
+"""A2: per-subject mu/beta ERD lateralisation at C3/C4, with a single-subject test.
 
-Reference: the recording reference is undocumented and ~25-60% of every
-channel's variance is common to all channels (DECISIONS D9). Power at C3 and
-C4 is therefore measured against an unknown, possibly active, possibly
-lateral site. We use the spherical-spline surface Laplacian (current source
-density, CSD), which is reference-free and local, and repeat the whole
-analysis under common average reference (CAR) and the raw reference to show
-how much the labels depend on that choice.
-
-Lateralisation index (per subject, per band):
-    e_ch(trial) = band power in 0.5-3.975 s, in dB relative to the
-                  subject's mean baseline power (-1.5 to -0.5 s, all trials)
-    h(trial)    = e_C4 - e_C3       (positive = relatively more ERD on the left)
-    LI          = mean_right(h) - mean_left(h)   [dB]
-Motor imagery predicts ERD contralateral to the imagined hand, so LI > 0.
-Test: one-sided label-permutation test of LI > 0 within the subject.
+Outputs (outputs/task1/):
+  a2_lateralisation.csv     one row per subject: LI mu/beta, p, FDR q, label
+  a2_reference_check.csv    how LI and labels change with the spatial reference
+  a2_tf_S0xx.png            time-frequency maps for 2 'present' and 2 'absent' subjects
+  a2_summary.png            LI mu vs beta for all subjects + grand-average ERD
 """
 from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import mne
 import numpy as np
 import pandas as pd
 from mne.time_frequency import tfr_array_morlet
+from scipy.stats import false_discovery_control
 
-from task1.data import SFREQ, TMIN, kept_subjects, load_subject
-from task1.plotting import C, DIVERGING, plt, style
+from task1.data import kept_subjects, load_epochs
 
-# C3, C4 and their neighbours in the 10-10 grid (the brief's "and neighbours").
-TF_CHANNELS = ["FC3", "C5", "C3", "C1", "CP3", "Cz", "FC4", "C6", "C4", "C2", "CP4"]
-FREQS = np.arange(4.0, 41.0, 1.0)
-# freq/2 cycles = a 0.5 s wavelet at every frequency: fine enough in time to
-# keep the 0.5 s post-cue exclusion meaningful, ~2 Hz resolution in mu.
+DISPLAY = (-1.5, 3.75)  # plots stop before the wavelet edge artefact at the epoch end
+
+# ---- analysis parameters (all fixed before looking at any result) --------------------
+LEFT_CH = ["C3", "FC3", "C1", "C5", "CP3"]   # C3 and its 4 nearest 10-10 neighbours
+RIGHT_CH = ["C4", "FC4", "C2", "C6", "CP4"]  # mirror set over the right hemisphere
+FREQS = np.arange(4.0, 36.0, 1.0)
+# freq/2 cycles: ~0.5 s wavelets in mu, shorter in beta - enough frequency resolution to
+# separate mu from beta while keeping temporal smearing below the 0.5 s guard intervals.
 N_CYCLES = FREQS / 2.0
-DECIM = 4                                   # 40 Hz time grid is plenty for 4-40 Hz power
-
-# Baseline inside the 4.1 s rest period that precedes every cue: it starts
-# 2.6 s after the previous imagery ended (post-imagery beta rebound is over
-# within ~1-2 s) and ends 0.5 s before the cue, so the 0.5 s wavelets do not
-# smear the cue response into it, and anticipation of a cue whose timing is
-# fixed (4.1 s rhythm) has less room to appear.
-BASELINE = (-1.5, -0.5)
-# ERD window starts 0.5 s after the cue, skipping the visual evoked response
-# to the target appearing (an A3 route) and the wavelet's onset smearing.
-ERD_WIN = (0.5, 3.975)
+DECIM = 4                                    # 160 Hz -> 40 Hz TF time grid; ample for ERD
 BANDS = {"mu": (8.0, 13.0), "beta": (13.0, 30.0)}
-N_PERM = 10_000
-# Two bands are tested per subject, so each band is tested at alpha/2
-# (Bonferroni) and the per-subject label keeps a family-wise alpha of 0.05.
+# Baseline inside the T0 rest that precedes every cue (4.1 s long). It ends 0.5 s before
+# the cue so neither anticipation nor wavelet smearing of the cue response enters it, and
+# starts ~2.6 s after the previous imagery ended, after most of the post-imagery beta
+# rebound.
+BASELINE = (-1.5, -0.5)
+# Imagery window: skip the first 0.5 s (visual evoked response to the cue, and the
+# wavelets' own smearing) and stop 0.5 s before the epoch edge at 4.0 s.
+ACTIVE = (0.5, 3.5)
+N_PERM = 5000
 ALPHA = 0.05
-ALPHA_BAND = ALPHA / len(BANDS)
-REFERENCES = ("csd", "car", "raw")
+SEED = 42
+REFERENCES = ["as_recorded", "average", "csd"]  # csd is the primary analysis
+PRIMARY_REF = "csd"
 
 
-def apply_reference(X: np.ndarray, ch_names, kind: str) -> np.ndarray:
-    """Re-reference trials (n, ch, t) in microvolts."""
-    if kind == "raw":
-        return X
-    if kind == "car":
-        return X - X.mean(axis=1, keepdims=True)
-    if kind == "csd":
-        info = mne.create_info(list(ch_names), SFREQ, "eeg")
-        ep = mne.EpochsArray(X * 1e-6, info, tmin=TMIN, verbose="error")
-        ep.set_montage("standard_1005", verbose="error")
-        # MNE defaults (spline order 4, lambda 1e-5) as in Perrin et al. 1989.
+def spatial_reference(epochs: mne.Epochs, ref: str) -> mne.Epochs:
+    ep = epochs.copy()
+    if ref == "average":
+        ep.set_eeg_reference("average", projection=False, verbose="error")
+    elif ref == "csd":
+        # Surface Laplacian: second spatial derivative of the potential, so any signal
+        # common to all electrodes (including whatever the unknown reference picks up)
+        # is removed, and each channel reflects mostly the cortex beneath it.
         ep = mne.preprocessing.compute_current_source_density(ep, verbose="error")
-        return ep.get_data()                # V/m^2; units cancel in the dB ratio
-    raise ValueError(kind)
+    return ep
 
 
-def tf_power(Xch: np.ndarray, times: np.ndarray):
-    """Single-trial Morlet power (n, ch, f, t) and the subject's baseline (ch, f)."""
-    power = tfr_array_morlet(Xch, SFREQ, FREQS, n_cycles=N_CYCLES, output="power",
-                             decim=DECIM, verbose="error")
-    t = times[::DECIM]
-    base_mask = (t >= BASELINE[0]) & (t <= BASELINE[1])
-    # Baseline pooled over all trials of both classes: a per-class baseline
-    # could itself create a left/right difference.
-    base = power[..., base_mask].mean(axis=-1).mean(axis=0)
-    return power, base, t
+def tf_power(epochs: mne.Epochs, picks: list[str]) -> tuple[np.ndarray, np.ndarray]:
+    """Single-trial Morlet power, (trial, channel, freq, time), on a 40 Hz time grid."""
+    x = epochs.get_data(picks=picks)
+    p = tfr_array_morlet(x, epochs.info["sfreq"], FREQS, n_cycles=N_CYCLES,
+                         output="power", decim=DECIM, verbose="error")
+    return p, epochs.times[::DECIM]
 
 
-def band_erd(power: np.ndarray, base: np.ndarray, t: np.ndarray, band) -> np.ndarray:
-    """Per-trial band ERD in dB: power is averaged over the band and window FIRST,
-    then converted to dB. Averaging single-trial dB instead is biased by about
-    -2.5 dB (E[log P] < log E[P] for skewed power), which showed up as a fake
-    'ERD' in the baseline period of the first version of the figures."""
-    fmask = (FREQS >= band[0]) & (FREQS < band[1])
-    tmask = (t >= ERD_WIN[0]) & (t <= ERD_WIN[1])
-    trial_bp = power[:, :, fmask][..., tmask].mean(axis=(2, 3))     # (n, ch)
-    base_bp = base[:, fmask].mean(axis=1)                           # (ch,)
-    return 10 * np.log10(trial_bp / base_bp[None, :])
+def _mask(times, win):
+    return (times >= win[0]) & (times <= win[1])
 
 
-def lateralisation_test(h: np.ndarray, y: np.ndarray, rng: np.random.Generator):
-    """LI = mean(h | right) - mean(h | left); one-sided permutation p for LI > 0."""
-    def li(labels):
-        r = labels == 1
-        return h[r].mean() - h[~r].mean()
+def band_erd(p: np.ndarray, times: np.ndarray, band: tuple[float, float]) -> np.ndarray:
+    """Per-trial ERD in dB: 10*log10(band power in the imagery window / band power in the
+    same trial's pre-cue baseline), shape (trial, channel).
 
-    obs = li(y)
-    # Vectorised permutations: each row is a shuffled label vector.
-    perms = np.array([rng.permutation(y) for _ in range(N_PERM)])
-    r = perms == 1
-    null = (r * h).sum(1) / r.sum(1) - ((~r) * h).sum(1) / (~r).sum(1)
-    p = (1 + np.sum(null >= obs)) / (N_PERM + 1)
-    return obs, p
-
-
-def analyse_subject(d: dict, reference: str, seed: int) -> tuple[dict, dict]:
-    ch = list(d["ch_names"])
-    Xr = apply_reference(d["X"], ch, reference)
-    idx = [ch.index(c) for c in TF_CHANNELS]
-    power, base, t = tf_power(Xr[:, idx], d["times"])
-    y = d["y"]
-    i3, i4 = TF_CHANNELS.index("C3"), TF_CHANNELS.index("C4")
-    rng = np.random.default_rng(seed)
-    row = {}
-    present = False
-    for band_name, band in BANDS.items():
-        e = band_erd(power, base, t, band)
-        h = e[:, i4] - e[:, i3]
-        li, p = lateralisation_test(h, y, rng)
-        # ERD contralateral to the imagined hand: C4 on left trials, C3 on right.
-        contra = np.concatenate([e[y == 0, i4], e[y == 1, i3]]).mean()
-        row[f"LI_{band_name}_db"] = li
-        row[f"p_{band_name}"] = p
-        row[f"contra_erd_{band_name}_db"] = contra
-        # "Lateralised ERD": the asymmetry is significant AND it is a power
-        # decrease on the contralateral side, not only an ipsilateral increase.
-        present |= (p < ALPHA_BAND) and (contra < 0)
-    row["label"] = "present" if present else "absent"
-    # Class-average maps for the figures: (class, C3/C4, f, t)
-    maps = np.stack([10 * np.log10(power[y == k][:, [i3, i4]].mean(0) / base[[i3, i4], :, None])
-                     for k in (0, 1)])
-    return row, {"maps": maps, "t": t}
+    Power is averaged over time and frequency *before* the log. Taking the log of each
+    time-frequency pixel first and averaging afterwards biases every value downward
+    (mean of log < log of mean for a noisy positive quantity), by ~2 dB here.
+    Per-trial baseline: power drifts slowly within a 2-min run (alertness, impedance),
+    and a trial's own rest is its closest reference. A baseline shared by all trials
+    would cancel exactly in the left-minus-right LI, so the choice matters only through
+    its noise.
+    """
+    f = (FREQS >= band[0]) & (FREQS <= band[1])
+    act = p[:, :, f][..., _mask(times, ACTIVE)].mean(axis=(-1, -2))
+    base = p[:, :, f][..., _mask(times, BASELINE)].mean(axis=(-1, -2))
+    return 10 * np.log10(act / base)
 
 
-def run_a2(out_dir: Path, seed: int) -> pd.DataFrame:
-    out_dir.mkdir(parents=True, exist_ok=True)
-    fig_dir = out_dir / "figures"; fig_dir.mkdir(exist_ok=True)
-    subjects = kept_subjects(out_dir / "audit.csv")
-    rows, maps = [], {}
-    for s in subjects:
-        d = load_subject(s)
-        row = {"subject": s, "n_left": int((d["y"] == 0).sum()), "n_right": int((d["y"] == 1).sum())}
-        for ref in REFERENCES:
-            # Same seed per subject for every reference: the permutation noise
-            # is then identical and differences come from the reference only.
-            r, m = analyse_subject(d, ref, seed + s)
-            suffix = "" if ref == "csd" else f"_{ref}"
-            row.update({k + suffix: v for k, v in r.items()})
-            if ref == "csd":
-                maps[s] = m
+def average_tf_db(p: np.ndarray, times: np.ndarray) -> np.ndarray:
+    """Trial-averaged ERD map (channel, freq, time): average power first, then dB
+    relative to the averaged baseline of the same trials (classic ERD/ERS map)."""
+    m = p.mean(axis=0)
+    return 10 * np.log10(m / m[..., _mask(times, BASELINE)].mean(axis=-1, keepdims=True))
+
+
+def lateralisation(d: np.ndarray, y: np.ndarray, rng: np.random.Generator) -> tuple[float, float, float]:
+    """LI = mean(d | left) - mean(d | right), d = ERD(C3) - ERD(C4) in dB.
+
+    Left-hand imagery should desynchronise the right hemisphere (C4 power drops), so d
+    is larger on left trials: LI > 0 is the physiologically expected direction.
+    Test: one-sided label permutation within the subject (exchangeable under H0: the
+    label carries no information about d). Also returns LI / pooled SD (effect size).
+    """
+    def stat(lab):
+        return d[lab == 0].mean() - d[lab == 1].mean()
+
+    obs = stat(y)
+    perm = np.array([stat(rng.permutation(y)) for _ in range(N_PERM)])
+    p = (1 + np.sum(perm >= obs)) / (1 + N_PERM)
+    pooled = np.sqrt((d[y == 0].var(ddof=1) + d[y == 1].var(ddof=1)) / 2)
+    return float(obs), float(p), float(obs / pooled)
+
+
+def analyse_subject(subject: int) -> tuple[list[dict], dict]:
+    epochs = load_epochs(subject)
+    y = (epochs.events[:, 2] == 2).astype(int)                  # 0 = left, 1 = right
+    rows, tf_keep = [], {}
+    for ref in REFERENCES:
+        ep = spatial_reference(epochs, ref)
+        pw, times = tf_power(ep, LEFT_CH + RIGHT_CH)
+        row = dict(subject=subject, reference=ref, n_left=int((y == 0).sum()),
+                   n_right=int((y == 1).sum()))
+        for band, rng_ in BANDS.items():
+            bw = band_erd(pw, times, rng_)
+            d = bw[:, 0] - bw[:, len(LEFT_CH)]                       # C3 - C4
+            # Seed per subject and band so each test is reproducible on its own.
+            rng = np.random.default_rng([SEED, subject, list(BANDS).index(band)])
+            li, p, es = lateralisation(d, y, rng)
+            row.update({f"li_{band}_db": li, f"p_{band}": p, f"es_{band}": es,
+                        # ERD in each hemisphere averaged over both classes, for context
+                        f"erd_c3_{band}_db": float(bw[:, 0].mean()),
+                        f"erd_c4_{band}_db": float(bw[:, len(LEFT_CH)].mean())})
+            # Neighbourhood version (mean of the 5-channel sets): a robustness check
+            # that the C3/C4 result is not one electrode's noise.
+            dn = bw[:, :len(LEFT_CH)].mean(1) - bw[:, len(LEFT_CH):].mean(1)
+            li_n, p_n, _ = lateralisation(dn, y, np.random.default_rng([SEED, subject, 10 + list(BANDS).index(band)]))
+            row.update({f"li_{band}_neigh_db": li_n, f"p_{band}_neigh": p_n})
         rows.append(row)
-        print(f"A2 S{s:03d}: mu LI {row['LI_mu_db']:+.2f} dB p={row['p_mu']:.4f} | "
-              f"beta LI {row['LI_beta_db']:+.2f} dB p={row['p_beta']:.4f} -> {row['label']}")
-
-    df = pd.DataFrame(rows)
-    df.to_csv(out_dir / "a2_lateralisation.csv", index=False, float_format="%.5g")
-    # Large intermediate (class-average TF maps): kept in cache/, not in git.
-    cache = out_dir.parents[1] / "cache"; cache.mkdir(exist_ok=True)
-    np.savez(cache / "a2_maps.npz", subjects=np.array(list(maps)),
-             maps=np.stack([maps[s]["maps"] for s in maps]), t=maps[subjects[0]]["t"], freqs=FREQS)
-
-    _figures(df, maps, fig_dir)
-    agree = {ref: (df["label"] == df[f"label_{ref}"]).mean() for ref in ("car", "raw")}
-    n_present = (df["label"] == "present").sum()
-    print(f"A2: lateralised ERD present in {n_present}/{len(df)} subjects (CSD); "
-          f"label agreement with CAR {agree['car']:.0%}, raw {agree['raw']:.0%}")
-    return df
+        if ref == PRIMARY_REF:
+            tf_keep = dict(times=times, left=average_tf_db(pw[y == 0], times),
+                           right=average_tf_db(pw[y == 1], times))
+    return rows, tf_keep
 
 
-def _pick_examples(df: pd.DataFrame):
-    """3 present (strongest evidence) and 3 absent (weakest evidence), chosen by rule."""
-    df = df.assign(p_min=df[["p_mu", "p_beta"]].min(axis=1))
-    present = df[df.label == "present"].sort_values("p_min").subject.tolist()[:3]
-    absent = df[df.label == "absent"].sort_values("p_min", ascending=False).subject.tolist()[:3]
-    return present, absent
+def add_fdr_and_labels(df: pd.DataFrame) -> pd.DataFrame:
+    """BH-FDR across subjects, per band, separately for each reference.
+
+    Label rule, fixed in advance: 'present' if the *mu* LI survives FDR (q < 0.05) in the
+    expected direction (one-sided test, so direction is built in). The assignment defines
+    the label on mu ERD; beta is kept as a supplementary column and does not change the
+    label. FDR rather than raw p: with 37 subjects, ~2 would pass p < .05 by chance."""
+    out = []
+    for _, g in df.groupby("reference"):
+        g = g.copy()
+        g["q_mu"] = false_discovery_control(g.p_mu.values, method="bh")
+        g["q_beta"] = false_discovery_control(g.p_beta.values, method="bh")
+        g["label"] = np.where(g.q_mu < ALPHA, "present", "absent")
+        out.append(g)
+    return pd.concat(out)
 
 
-def _figures(df: pd.DataFrame, maps: dict, fig_dir: Path):
-    style()
-    present, absent = _pick_examples(df)
-    for name, subs in (("present", present), ("absent", absent)):
-        fig, axes = plt.subplots(len(subs), 4, figsize=(9.5, 2.0 * len(subs)), sharex=True, sharey=True,
-                                 squeeze=False)
-        for i, s in enumerate(subs):
-            m, t = maps[s]["maps"], maps[s]["t"]
-            r = df.set_index("subject").loc[s]
-            for j, (k, c, title) in enumerate([(0, 0, "C3 · left"), (1, 0, "C3 · right"),
-                                               (0, 1, "C4 · left"), (1, 1, "C4 · right")]):
-                ax = axes[i, j]
-                im = ax.pcolormesh(t, FREQS, m[k, c], cmap=DIVERGING, vmin=-3, vmax=3, shading="auto")
-                ax.axvline(0, color=C["ink"], lw=0.8)
-                for lo, hi in BANDS.values():
-                    ax.axhline(lo, color=C["ink2"], lw=0.4, ls=":")
-                ax.grid(False)
-                if i == 0:
-                    ax.set_title(title)
-                if j == 0:
-                    ax.set_ylabel(f"S{s:03d}\nHz")
-                if i == len(subs) - 1:
-                    ax.set_xlabel("time from cue (s)")
-            axes[i, 3].text(1.03, 0.5, f"μ LI {r.LI_mu_db:+.2f} dB, p={r.p_mu:.3f}\n"
-                            f"β LI {r.LI_beta_db:+.2f} dB, p={r.p_beta:.3f}",
-                            transform=axes[i, 3].transAxes, va="center", fontsize=8, color=C["ink2"])
-        cb = fig.colorbar(im, ax=axes, location="bottom", shrink=0.4, pad=0.12)
-        cb.set_label("power vs baseline (dB); blue = ERD")
-        fig.suptitle(f"Lateralised ERD {name}: CSD, class-average time-frequency power", y=1.0)
-        fig.savefig(fig_dir / f"a2_tf_{name}.png")
-        plt.close(fig)
+def pick_examples(prim: pd.DataFrame) -> dict[str, list[int]]:
+    """Two per label, chosen by rule rather than by eye: for 'present' the strongest and
+    the weakest significant subject; for 'absent' the one closest to significance and
+    the clearest null. Shows the range of each group, not only its best case."""
+    # Ties in q are common after BH (step-up), so break them by effect size.
+    prim = prim.assign(qmin=prim.q_mu, es=-prim.es_mu).sort_values(["qmin", "es"])
+    pres, abs_ = prim[prim.label == "present"], prim[prim.label == "absent"]
+    ex = {}
+    if len(pres):
+        ex["present"] = sorted({int(pres.subject.iloc[0]), int(pres.subject.iloc[-1])})
+    if len(abs_):
+        ex["absent"] = sorted({int(abs_.subject.iloc[0]), int(abs_.subject.iloc[-1])})
+    return ex
 
-    # Group view: mu vs beta LI per subject, label shown by marker AND colour.
-    fig, ax = plt.subplots(figsize=(4.6, 4.0))
-    for lab, col, mk in (("present", C["blue"], "o"), ("absent", C["grey"], "s")):
-        sub = df[df.label == lab]
-        ax.scatter(sub.LI_mu_db, sub.LI_beta_db, s=36, color=col, marker=mk,
-                   edgecolor="white", linewidth=1, label=f"{lab} (n={len(sub)})", zorder=3)
-    ax.axhline(0, color=C["ink2"], lw=0.8); ax.axvline(0, color=C["ink2"], lw=0.8)
-    ax.set_xlabel("μ (8–13 Hz) lateralisation index (dB)")
-    ax.set_ylabel("β (13–30 Hz) lateralisation index (dB)")
-    ax.set_title("Per-subject lateralisation (CSD); > 0 = contralateral ERD")
-    ax.legend(loc="upper left")
-    fig.savefig(fig_dir / "a2_li_scatter.png")
+
+def plot_subject(subject: int, tf: dict, row: pd.Series, path: Path) -> None:
+    t = tf["times"]
+    m = _mask(t, DISPLAY)
+    i3, i4 = 0, len(LEFT_CH)
+    panels = [("left fist", tf["left"]), ("right fist", tf["right"]),
+              ("left - right", tf["left"] - tf["right"])]
+    fig, ax = plt.subplots(2, 3, figsize=(12, 6), sharex=True, sharey=True, constrained_layout=True)
+    for r, (ci, cname) in enumerate([(i3, "C3"), (i4, "C4")]):
+        for c, (title, arr) in enumerate(panels):
+            lim = 6.0 if c < 2 else 4.0
+            im = ax[r, c].pcolormesh(t[m], FREQS, arr[ci][:, m], cmap="RdBu_r",
+                                     vmin=-lim, vmax=lim, shading="auto")
+            for lo, hi in BANDS.values():
+                ax[r, c].axhline(lo, color="k", lw=0.4, ls=":")
+            ax[r, c].axhline(30, color="k", lw=0.4, ls=":")
+            ax[r, c].axvline(0, color="k", lw=0.8)
+            ax[r, c].axvspan(*BASELINE, color="grey", alpha=0.12)
+            ax[r, c].add_patch(plt.Rectangle((ACTIVE[0], BANDS["mu"][0]), ACTIVE[1] - ACTIVE[0],
+                                             BANDS["beta"][1] - BANDS["mu"][0], fill=False,
+                                             ec="k", lw=0.6, ls="--"))
+            ax[r, c].set_title(f"{cname} (CSD) - {title}", fontsize=9)
+            if c == 0:
+                ax[r, c].set_ylabel("Hz")
+            if r == 1:
+                ax[r, c].set_xlabel("time from cue (s)")
+        fig.colorbar(im, ax=ax[r, :], shrink=0.8, label="dB vs baseline")
+    fig.suptitle(f"S{subject:03d}  [{row.label}]  LI mu {row.li_mu_db:+.2f} dB (q={row.q_mu:.3f})   "
+                 f"LI beta {row.li_beta_db:+.2f} dB (q={row.q_beta:.3f})   n={row.n_left}/{row.n_right}",
+                 fontsize=10)
+    fig.savefig(path, dpi=120)
     plt.close(fig)
 
-    # Reference sensitivity: the same index under CAR and raw reference.
-    fig, axes = plt.subplots(1, 2, figsize=(7.5, 3.4), sharey=True)
-    for ax, band in zip(axes, BANDS):
-        x = np.arange(len(df))
-        order = np.argsort(df[f"LI_{band}_db"].values)
-        for ref, col, mk in (("csd", C["blue"], "o"), ("car", C["orange"], "^"), ("raw", C["grey"], "s")):
-            key = f"LI_{band}_db" + ("" if ref == "csd" else f"_{ref}")
-            ax.scatter(x, df[key].values[order], s=18, color=col, marker=mk, label=ref.upper(), zorder=3)
-        ax.axhline(0, color=C["ink2"], lw=0.8)
-        ax.set_title(f"{band} LI by reference")
-        ax.set_xlabel("subjects, sorted by CSD LI")
-    axes[0].set_ylabel("lateralisation index (dB)")
-    axes[0].legend()
-    fig.savefig(fig_dir / "a2_reference_effect.png")
+
+def plot_summary(prim: pd.DataFrame, tfs: dict[int, dict], path: Path) -> None:
+    fig, ax = plt.subplots(1, 3, figsize=(15, 4.5), constrained_layout=True)
+    col = prim.label.map({"present": "tab:blue", "absent": "tab:grey"})
+    ax[0].scatter(prim.li_mu_db, prim.li_beta_db, c=col)
+    for r in prim.itertuples():
+        ax[0].annotate(str(r.subject), (r.li_mu_db, r.li_beta_db), fontsize=6, alpha=0.7)
+    ax[0].axhline(0, color="k", lw=0.5)
+    ax[0].axvline(0, color="k", lw=0.5)
+    ax[0].set_xlabel("LI mu (dB)")
+    ax[0].set_ylabel("LI beta (dB)")
+    ax[0].set_title(f"Per-subject LI (CSD); blue = mu lateralised ERD present ({(prim.label == 'present').sum()}/{len(prim)})", fontsize=9)
+
+    # Grand-average mu ERD time course, contralateral vs ipsilateral to the imagined hand.
+    t = next(iter(tfs.values()))["times"]
+    f = (FREQS >= BANDS["mu"][0]) & (FREQS <= BANDS["mu"][1])
+    i3, i4 = 0, len(LEFT_CH)
+    contra = np.mean([(tf["left"][i4][f].mean(0) + tf["right"][i3][f].mean(0)) / 2 for tf in tfs.values()], 0)
+    ipsi = np.mean([(tf["left"][i3][f].mean(0) + tf["right"][i4][f].mean(0)) / 2 for tf in tfs.values()], 0)
+    m = _mask(t, DISPLAY)
+    ax[1].plot(t[m], contra[m], label="contralateral")
+    ax[1].plot(t[m], ipsi[m], label="ipsilateral")
+    ax[1].axvline(0, color="k", lw=0.8)
+    ax[1].axvspan(*BASELINE, color="grey", alpha=0.12)
+    ax[1].axvspan(*ACTIVE, color="tab:orange", alpha=0.06)
+    ax[1].set_xlabel("time from cue (s)")
+    ax[1].set_ylabel("mu power (dB)")
+    ax[1].set_title(f"Grand average, all {len(tfs)} subjects (CSD)")
+    ax[1].legend()
+
+    fb = (FREQS >= BANDS["beta"][0]) & (FREQS <= BANDS["beta"][1])
+    contra_b = np.mean([(tf["left"][i4][fb].mean(0) + tf["right"][i3][fb].mean(0)) / 2 for tf in tfs.values()], 0)
+    ipsi_b = np.mean([(tf["left"][i3][fb].mean(0) + tf["right"][i4][fb].mean(0)) / 2 for tf in tfs.values()], 0)
+    ax[2].plot(t[m], contra_b[m], label="contralateral")
+    ax[2].plot(t[m], ipsi_b[m], label="ipsilateral")
+    ax[2].axvline(0, color="k", lw=0.8)
+    ax[2].axvspan(*BASELINE, color="grey", alpha=0.12)
+    ax[2].axvspan(*ACTIVE, color="tab:orange", alpha=0.06)
+    ax[2].set_xlabel("time from cue (s)")
+    ax[2].set_ylabel("beta power (dB)")
+    ax[2].set_title("Grand average beta (CSD)")
+    ax[2].legend()
+    fig.savefig(path, dpi=120)
     plt.close(fig)
+
+
+def main(out_dir: Path) -> pd.DataFrame:
+    out_dir = Path(out_dir)
+    rows, tfs = [], {}
+    subjects = kept_subjects()
+    for i, s in enumerate(subjects, 1):
+        r, tf = analyse_subject(s)
+        rows += r
+        tfs[s] = tf
+        print(f"[A2] {i:2d}/{len(subjects)} S{s:03d} done", flush=True)
+    df = add_fdr_and_labels(pd.DataFrame(rows))
+
+    prim = df[df.reference == PRIMARY_REF].drop(columns="reference").reset_index(drop=True)
+    cols = ["subject", "n_left", "n_right", "li_mu_db", "es_mu", "p_mu", "q_mu",
+            "li_beta_db", "es_beta", "p_beta", "q_beta", "label",
+            "erd_c3_mu_db", "erd_c4_mu_db", "erd_c3_beta_db", "erd_c4_beta_db",
+            "li_mu_neigh_db", "p_mu_neigh", "li_beta_neigh_db", "p_beta_neigh"]
+    prim[cols].round(4).to_csv(out_dir / "a2_lateralisation.csv", index=False)
+
+    # Reference sensitivity: LI and label under each reference, side by side.
+    wide = df.pivot(index="subject", columns="reference", values=["li_mu_db", "li_beta_db", "label"])
+    wide.columns = [f"{a}_{b}" for a, b in wide.columns]
+    wide.reset_index().to_csv(out_dir / "a2_reference_check.csv", index=False)
+
+    # Example subjects depend on the results; clear old ones so no stale figure survives.
+    for old in out_dir.glob("a2_tf_S*.png"):
+        old.unlink()
+    for label, subs in pick_examples(prim).items():
+        for s in subs:
+            plot_subject(s, tfs[s], prim[prim.subject == s].iloc[0],
+                         out_dir / f"a2_tf_S{s:03d}_{label}.png")
+    plot_summary(prim, tfs, out_dir / "a2_summary.png")
+
+    for ref in REFERENCES:
+        g = df[df.reference == ref]
+        print(f"[A2] {ref:12s} present {int((g.label == 'present').sum()):2d}/{len(g)}  "
+              f"(mu p<.05 uncorrected: {int((g.p_mu < ALPHA).sum())}; beta q<.05, supplementary: {int((g.q_beta < ALPHA).sum())}); "
+              f"median LI mu {g.li_mu_db.median():+.2f} dB, beta {g.li_beta_db.median():+.2f} dB")
+    ch = (wide[f"label_{PRIMARY_REF}"] != wide["label_as_recorded"]).sum()
+    print(f"[A2] labels that change between as-recorded and CSD reference: {ch}")
+    print(f"[A2] examples: {pick_examples(prim)}")
+    return prim
+
+
+if __name__ == "__main__":
+    main(Path(__file__).resolve().parents[1] / "outputs" / "task1")
