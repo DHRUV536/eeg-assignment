@@ -168,3 +168,36 @@ All 23 training subjects, same seed.
    the reference itself): the same unknown reference A2 had to work around. What the model
    cannot represent is still any C3-vs-C4 (or F7-vs-F8) *contrast*, so it cannot use lateralised
    ERD at all; it can only use the reference-induced common-mode part of the eye movement.
+
+---
+
+## P4 — B2.3 what the model relies on (committed before any attribution was computed)
+
+Model: the best transformer by validation accuracy (D28): `tf-time_nall_stopacc`
+(time-patch tokens, test 65.6%). EEGNet (`eegnet_nall`, 78.6%) gets the same channel-level
+analyses for comparison.
+
+Analyses: Integrated Gradients (baseline = all-zero input = training mean after z-scoring,
+32 steps, target = predicted class) on every test trial.
+(i) token deletion: per trial, replace the input samples of the k most-attributed time tokens
+(250 ms each) with the training mean vs k random tokens (10 random draws), k = 0…8;
+(ii) attribution share per channel group (frontal/ocular 17 ch: Fp*, AF*, F*; sensorimotor 21:
+FC*, C*, CP*; parieto-occipital 18: P*, PO*, O*, Iz; rest 8: FT/T/TP) and per time token;
+(iii) group deletion: zero each channel group vs random 17-channel sets;
+(iv) per test subject (n = 10), Spearman correlation of model accuracy with the A2 mu LI and the
+A3 ocular, visual-evoked and motor decoder accuracies.
+
+**Prediction.**
+1. Deletion is faithful: removing the top-2 attributed tokens drops accuracy to ≈ 55%, removing 2
+   random tokens to ≈ 63% (from 65.6%).
+2. Attribution peaks in 0.25–1.5 s (saccade towards the target and the return), not evenly over
+   the 4 s imagery period.
+3. Per channel, frontal/ocular channels carry > 2× the attribution of sensorimotor channels, for
+   both models.
+4. Zeroing frontal/ocular channels drops both models to ≈ 52–58%; zeroing sensorimotor channels
+   costs ≤ 3 points; random 17-channel sets cost little.
+5. Per-subject accuracy correlates positively with A3 ocular accuracy (ρ > 0.5) and not with the
+   mu LI (|ρ| < 0.3). Caveat fixed in advance: all 10 test subjects are A2-absent (LI −1.2 to
+   +2.1 dB), so the LI correlation has little range and n = 10 gives wide uncertainty.
+6. Conclusion expected: the models read the **A3 ocular confound**, with at most a small
+   sensorimotor contribution.
