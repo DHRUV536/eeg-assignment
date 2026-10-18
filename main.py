@@ -37,10 +37,16 @@ def stage_a2() -> None:
     a2_erd.main(OUT_T1)
 
 
+def stage_a3() -> None:
+    from task1 import a3_confounds
+    a3_confounds.main(OUT_T1)
+
+
 # Order matters: later stages read audit.csv to know which subjects are kept.
 STAGES = {
     "a1": stage_a1,
     "a2": stage_a2,
+    "a3": stage_a3,
 }
 
 

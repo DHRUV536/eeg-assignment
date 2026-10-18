@@ -29,3 +29,17 @@ Format: **choice** / alternative / why / what would change with the alternative.
 **D11. LI = mean(C3−C4 | left) − mean(C3−C4 | right) of mu (8–13 Hz) ERD in dB; positive = expected (contralateral ERD).** One-sided label-permutation test (5000 permutations, seeded per subject); BH-FDR across the 37 subjects; *present* if q < 0.05. Beta (13–30 Hz) is computed the same way as a supplementary column but does not affect the label. / Two-sided test; uncorrected p; a mu-or-beta rule. / Physiology predicts the direction; the assignment defines the label on mu; FDR because ~2 of 37 subjects would pass p < .05 by chance. / Uncorrected p would label 10 subjects present instead of 5; adding beta (either band) would add one more (S108).
 
 **D12. Example subjects chosen by rule.** Present: strongest and weakest significant subject by mu q; absent: closest to significance and clearest null (ties broken by mu effect size). / Pick by eye. / Avoids showing only the best case.
+
+## A3 — confound check (`task1/a3_confounds.py`)
+
+**D13. The two routes: eye movements towards the target, and the lateralised visual response to the target's hemifield.** / Within-run drift, trial order, muscle activity. / Both follow directly from the cue (a target shown on the left or right of the screen for ~4 s, PhysioNet protocol page, no fixation instruction mentioned), and both produce left/right-specific signals. Drift is handled by leave-one-run-out CV rather than tested as a route; muscle activity during imagery would be motor-related, not a cue confound.
+
+**D14. Horizontal-EOG proxies F7−F8, AF7−AF8, Fp1−Fp2 at 0.1–8 Hz.** / ICA eye components; 1–40 Hz data. / No EOG channels exist; bipolar lateral frontal pairs reverse polarity for horizontal eye movements and are reference-free. 0.1 Hz keeps the sustained gaze offset that a 1 Hz high-pass would remove. / ICA adds a component-selection choice per subject; 1–40 Hz would keep the saccade transient but lose the sustained part (lower accuracy expected).
+
+**D15. Leave-one-run-out CV (3 folds) within subject.** / Stratified random 5-fold. / Trials in the same run share slow drifts (impedance, alertness); random folds put neighbouring trials in train and test and inflate accuracy. / Random k-fold would likely give higher accuracies for every route.
+
+**D16. Chance threshold: binomial, smallest k with P(X ≥ k | n, 0.5) ≤ .05 (Combrisson & Jerbi 2015), per subject n (≈64% for n = 45).** Group level: count of subjects above threshold vs the 1.85 expected by chance (binomial test), and Wilcoxon of accuracies vs 0.5. / Label-permutation threshold. / Closed form, per subject, and what the assignment asks for. CV predictions are not perfectly independent, so this threshold is slightly lenient; the group tests do not rely on it. / Permutation thresholds would be similar or a few points higher.
+
+**D17. Standardise + shrinkage LDA (Ledoit–Wolf).** / Logistic regression with tuned C. / ~30 training trials and up to 42 features: shrinkage regularises the covariance without a hyperparameter search that would need nested CV. / Similar accuracies, more tuning.
+
+**D18. Post-hoc pre-saccade window (0.05–0.15 s, 0.1–40 Hz).** Added after seeing the results (marked `posthoc` in the CSVs): the visual-evoked peak coincided with saccade onset and the zero-phase FIR smeared the saccade potential into the baseline. Ending the window before saccades separates an early visual response from the eye movement. Result: both routes ≈ chance there, so the visual decoder's 64.5% is attributed to eye movements.

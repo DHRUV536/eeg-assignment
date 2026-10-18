@@ -56,3 +56,29 @@ one-sided Wilcoxon of accuracies vs 0.5.
 5. Ocular and motor accuracies will be only weakly correlated across subjects (|r| < 0.3), i.e.
    they are different subjects' "routes", and at least one A2 *absent* subject will be strongly
    ocular-decodable.
+
+### Outcome P1 (from `outputs/task1/a3_summary.csv`, `a3_decoders.csv`, `a3_evidence.png`)
+
+| route | predicted | observed (mean acc; subjects ≥ threshold) |
+|---|---|---|
+| ocular | 57–60%; 8–15/37 | **76.0%; 31/37** (Wilcoxon p < .001) |
+| visual evoked | 52–54%; ≤ 4/37 | **64.5%; 20/37** (p < .001) |
+| visual alpha | near chance; ≤ 3/37 | 51.0%; 2/37 (p = .39) ✓ |
+| motor (control) | 57–60%; 8–10/37 | 52.7%; 8/37 (p = .13) — count ✓, mean lower |
+| ocular vs motor, across subjects | \|ρ\| < 0.3 | ρ = −0.03 ✓ |
+| ≥ 1 A2-absent subject ocular-decodable | yes | 26 of the 32 A2-absent subjects ✓ |
+
+1. **Ocular — direction right, size badly underestimated.** The grand-average F7−F8 trace shows a
+   ±45 µV step of opposite polarity for left vs right targets starting ~0.2 s after the cue,
+   i.e. a saccade *towards* the target (a leftward saccade brings the positive cornea towards F7),
+   in nearly every subject. Looking at the target was the norm, not the exception. The non-motor
+   route decodes left/right far better than the motor route itself.
+2. **Visual evoked — wrong.** It decoded well, but its grand-average PO7−PO8 peak sits at ~0.2 s,
+   the saccade onset, and left/right traces already differ before the cue (the zero-phase
+   1–40 Hz filter spreads the saccade potential backwards in time). **Post-hoc check** (added after
+   seeing these results, not predicted): restricted to 0.05–0.15 s, before saccades, on
+   0.1–40 Hz data, visual decoding falls to 51.8% (5/37, Wilcoxon p = .22) and ocular to 52.8%
+   (4/37). So the "visual" route is mostly the same eye movement seen from occipital sites, not
+   an independent lateralised visual response.
+3. **Motor control** was weaker than predicted on average: with ~30 training trials, 20 power
+   features are hard to fit, and only a minority of subjects lateralise (A2: 5/37 after FDR).

@@ -6,6 +6,7 @@ Epochs are cached in cache/epochs/ so later stages and re-runs do not reload EDF
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import mne
@@ -75,5 +76,9 @@ def load_epochs(subject: int, l_freq: float = L_FREQ, h_freq: float = H_FREQ,
     epochs = mne.concatenate_epochs(per_run, verbose="error")
 
     CACHE.mkdir(parents=True, exist_ok=True)
-    epochs.save(path, overwrite=True, fmt="single", verbose="error")
+    # Write to a temporary name and rename: an interrupted run must never leave a truncated
+    # cache file that a later run would trust.
+    tmp = CACHE / f"tmp_{os.getpid()}_{tag}"
+    epochs.save(tmp, overwrite=True, fmt="single", verbose="error")
+    os.replace(tmp, path)
     return epochs

@@ -1,0 +1,7 @@
+route,posthoc,mean_acc,median_acc,n_above,n_subjects,expected_by_chance,p_count,p_wilcoxon_vs_50
+ocular,False,0.7602,0.7778,31,37,1.85,0.0,0.0
+visual_evoked,False,0.6448,0.6444,20,37,1.85,0.0,0.0
+visual_alpha,False,0.5102,0.4889,2,37,1.85,0.5582,0.3885
+motor,False,0.527,0.5333,8,37,1.85,0.0004,0.1272
+ocular_presaccade,True,0.5278,0.5333,4,37,1.85,0.1119,0.0331
+visual_presaccade,True,0.5183,0.5111,5,37,1.85,0.0359,0.2162
