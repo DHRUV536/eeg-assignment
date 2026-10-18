@@ -9,6 +9,7 @@ Specs fixed in PREDICTIONS.md P4 before this ran:
 """
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -196,7 +197,7 @@ def main(out_dir: Path = OUT) -> None:
     table = pd.read_csv(out_dir / "per_subject_table.csv").set_index("subject")
     corr_rows, subj_rows = [], []
     for name, run in models.items():
-        per = pd.Series(eval(runs.loc[run[0], "per_subject"])).rename(lambda s: int(s))
+        per = pd.Series(json.loads(runs.loc[run[0], "per_subject"])).rename(lambda s: int(s))
         for s, a in per.items():
             subj_rows.append(dict(model=name, subject=s, acc=a))
         for col in ["li_mu_db", "acc_ocular", "acc_visual_evoked", "acc_motor"]:

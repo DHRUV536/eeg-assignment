@@ -63,6 +63,11 @@ def stage_b23() -> None:
     b2_reliance.main(OUT_T1)
 
 
+def stage_report() -> None:
+    from task1 import report
+    report.main()
+
+
 # Order matters: later stages read audit.csv to know which subjects are kept.
 STAGES = {
     "a1": stage_a1,
@@ -72,6 +77,7 @@ STAGES = {
     "b2train": stage_b2train,     # resumable; EEG_TIME_BUDGET=<s> stops cleanly and resumes
     "b2report": stage_b2report,
     "b23": stage_b23,
+    "report": stage_report,
 }
 
 

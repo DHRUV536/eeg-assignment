@@ -1,38 +1,45 @@
-# EEG × Deep Learning research assignment
+# EEG × deep learning: motor imagery on PhysioNet EEGBCI (subjects 70–109)
 
-Task 1 (motor imagery, PhysioNet EEGBCI subjects 70–109) is complete in this repository. Task 2 (sleep staging) has the original `task2/sleep_pipeline.py` committed unmodified; its analysis has not been started.
+What is in the signal for imagined left vs right fist, and what do EEGNet and a small
+transformer learn from it? Short answer: the cue makes subjects **look at the target**, and that
+eye movement decodes left/right far better than sensorimotor ERD does; the networks use it.
+See `REPORT.pdf` (3 pages, including the 1-page write-up).
 
 ## Run
 
 ```bash
-pip install -r requirements.txt          # Python 3.13; exact versions used for every output
-python main.py                           # everything, in order; resumes finished training jobs
-python main.py --stages a1,a2,a3         # a subset: a1 a2 a3 b2train b23 b24 b25 b26
+pip install -r requirements.txt
+python main.py                       # everything, in order, then REPORT.pdf
+python main.py --stages a2,a3        # a subset: a1 a2 a3 b1 b2train b2report b23 report
 ```
 
-EDF files are read from `../files` (the PhysioNet folder next to this repository) or from `$EEGBCI_DIR`; any file not found locally is downloaded through `mne.datasets.eegbci`. Trial data and trained weights are cached in `cache/` (not in git).
-
-**Run time on a 2-core CPU:** Part A ≈ 20 min; Part B training ≈ 6 h (210 training runs of 200–500 steps, ~1–2 min each). Training jobs are written to their CSV as they finish, so an interrupted run continues where it stopped.
-
-**Reproducibility check:** a full `python main.py` re-run (training jobs resumed from saved weights, every analysis, table and figure recomputed) reproduced every committed CSV byte for byte; one figure (`a3_route_accuracies.png`) differed by sub-pixel point positions because it had first been drawn from the 4-decimal CSV, and the `main.py` version is the one committed.
-
-`REPORT.pdf` = the Task 1 write-up (`outputs/task1/WRITEUP.md`) plus key figures; Task 2 is marked as not yet done.
+- EDF files are read from `../files` (the PhysioNet folder next to this repository) or from
+  `$EEGBCI_DIR`; anything missing is downloaded with `mne.datasets.eegbci`.
+- Epochs, features, trained weights and attributions are cached in `cache/` (not in git); delete
+  it to recompute everything from the EDFs.
+- Training is resumable (per-epoch checkpoints). `EEG_TIME_BUDGET=<seconds>` makes the
+  `b2train` stage stop cleanly and continue on the next call; without it, it runs to the end.
+- Seed: 42 everywhere (`main.py`, `task1/train.py`); every run is in `outputs/task1/b2_runs.csv`.
+- Run time on a 4-core CPU: Part A ≈ 5 min, Part B training ≈ 40 min, B2.3 ≈ 3 min.
 
 ## Where things are
 
-| | |
+| file | what |
 |---|---|
-| `task1/audit.py` | A1 data audit → `outputs/task1/audit.csv` |
-| `task1/data.py` | shared trial loader (filtering, epoching, rejection) |
-| `task1/a2_erd.py` | A2 ERD, lateralisation index, permutation test, figures |
-| `task1/a3_confounds.py` | A3 route decoders, chance thresholds, per-subject table |
-| `task1/models.py` | EEGNet (80 Hz) and the transformer with three tokenisers |
-| `task1/train.py` | folds, preprocessing, training, resumable runner |
-| `task1/b2_*.py` | B2 experiments 1–6 |
-| `outputs/task1/` | every CSV and figure quoted in the write-up |
-| `outputs/task1/WRITEUP.md` | Task 1 write-up |
-| `PREDICTIONS.md` | each prediction, committed before its result, with the outcome added afterwards |
+| `task1/data_audit.py` | A1 audit → `audit.csv`, `audit_runs.csv`; refuses unexplained anomalies |
+| `task1/data.py` | shared loader: montage, per-run bad-channel interpolation, filtering, epochs |
+| `task1/a2_erd.py` | A2 CSD time–frequency ERD, mu lateralisation index, permutation test + FDR |
+| `task1/a3_confounds.py` | A3 eye-movement / visual / motor decoders, binomial chance thresholds |
+| `task1/models.py` | EEGNet (160 Hz) and the transformer with three tokenisers |
+| `task1/train.py` | subject split, train-only normalisation, resumable training |
+| `task1/b2_experiments.py` | B1 parameter counts, B2.1 scaling, B2.2 tokenisation |
+| `task1/b2_reliance.py` | B2.3 Integrated Gradients, deletion tests, HEOG regression, correlations |
+| `task1/report.py` | builds `REPORT.pdf` from the result files |
+| `outputs/task1/` | every CSV and figure; `per_subject_table.csv` = mu LI, p, label, A3 accuracies + thresholds |
+| `PREDICTIONS.md` | each prediction, committed before its result; outcomes appended afterwards |
 | `DECISIONS.md` | every non-trivial choice: choice / alternative / why / what would change |
 
-## Seeds
-Project seed 42 (`main.py`). Per-run seeds are derived from it (DECISIONS D0, D25). Every seed's result is in the run CSVs (`b2_runs.csv`, `b2_5_runs.csv`, `b2_6_runs.csv`), one row per test subject.
+Analyses added after seeing a result are marked **post-hoc** in the code, CSVs, DECISIONS.md and
+the report.
+
+Commits before `31929d4` belong to an earlier version of the assignment and are kept for history.
