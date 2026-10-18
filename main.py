@@ -42,11 +42,30 @@ def stage_a3() -> None:
     a3_confounds.main(OUT_T1)
 
 
+def stage_b1() -> None:
+    from task1 import b2_experiments
+    b2_experiments.b1_summary()
+    b2_experiments.subject_split()
+
+
+def stage_b2train() -> None:
+    from task1 import b2_experiments
+    b2_experiments.train_all()
+
+
+def stage_b2report() -> None:
+    from task1 import b2_experiments
+    b2_experiments.report()
+
+
 # Order matters: later stages read audit.csv to know which subjects are kept.
 STAGES = {
     "a1": stage_a1,
     "a2": stage_a2,
     "a3": stage_a3,
+    "b1": stage_b1,
+    "b2train": stage_b2train,     # resumable; EEG_TIME_BUDGET=<s> stops cleanly and resumes
+    "b2report": stage_b2report,
 }
 
 

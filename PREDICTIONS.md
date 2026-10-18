@@ -82,3 +82,46 @@ one-sided Wilcoxon of accuracies vs 0.5.
    an independent lateralised visual response.
 3. **Motor control** was weaker than predicted on average: with ~30 training trials, 20 power
    features are hard to fit, and only a minority of subjects lateralise (A2: 5/37 after FDR).
+
+---
+
+## P2 — B2.1 data scaling (committed before any network was trained)
+
+Setup: test on 10 fixed subjects; train on nested random subsets of 5, 20 and all 23 training
+subjects; one seed; EEGNet vs the time-patch transformer (D19–D27).
+
+Prediction, using what A3 showed: the left/right **eye movement** is large (±45 µV at F7−F8),
+has the same polarity in nearly every subject, and is inside the 0–4 s input. Both networks
+will learn it, so cross-subject accuracy will sit well above the motor-control level (52.7%
+within subject) and close to the within-subject ocular decoder (76%).
+
+| | 5 subjects | 20 | all 23 |
+|---|---|---|---|
+| EEGNet | ~62% | ~70% | ~71% |
+| Transformer (time-patch) | ~55% | ~66% | ~68% |
+
+- EEGNet ≥ transformer at every size, with the largest gap at 5 subjects and **no crossover**.
+  EEGNet's structure (temporal filters, then one spatial filter per temporal filter) is a
+  strong prior: a single depthwise spatial filter can form an F7−F8-like difference, and the
+  same structure is a learnable filter-bank CSP for ERD. The transformer must learn its spatial
+  projection, temporal filters and attention from fewer constraints, so it needs more data.
+- 20 → 23 subjects changes little (+3 subjects): both curves flatten.
+- With ~445 test trials, the pooled-accuracy SE is ≈ 2.4 points; with one seed, differences under
+  ~5 points will not be called real.
+
+## P3 — B2.2 tokenisation (committed before any network was trained)
+
+All 23 training subjects, same seed.
+
+1. **Time-patch ≈ channel + identity** (within ~4 points), both ≈ 65–70%: both can tell
+   electrodes apart (the time-patch spatial projection has one weight per electrode; the
+   identity embedding labels each channel token).
+2. **Channel tokens without identity ≈ chance (48–55%).** With shared token encoders,
+   attention and mean pooling, the model is exactly invariant to permuting electrodes (verified
+   in code): it sees an unordered *set* of 64 channel time series. It therefore cannot represent
+   anything that depends on *which* electrode carries a signal — no hemisphere contrast, no
+   "C3 vs C4", no "F7 vs F8". Both left/right signals in this data are mirror-symmetric: ERD at C4
+   vs C3, and the EOG step positive at F7 / negative at F8 vs the reverse. The set of channel
+   series is nearly the same for left and right trials, so only incidental asymmetries
+   (e.g. leftward vs rightward saccades of different size) are left to use. For telling left
+   from right this limitation is fatal.

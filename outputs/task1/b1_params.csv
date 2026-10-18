@@ -1,0 +1,5 @@
+model,tokeniser,params,ratio_to_eegnet
+EEGNet,,2962,1.0
+transformer,time,5994,2.024
+transformer,chan_id,6930,2.34
+transformer,chan_noid,5906,1.994
