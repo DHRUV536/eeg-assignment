@@ -125,3 +125,46 @@ All 23 training subjects, same seed.
    series is nearly the same for left and right trials, so only incidental asymmetries
    (e.g. leftward vs rightward saccades of different size) are left to use. For telling left
    from right this limitation is fatal.
+
+### Outcome P2 (from `outputs/task1/b2_runs.csv`, `b2_scaling_tokenisation.png`; 448 test trials, chance threshold 53.8%)
+
+| | 5 subjects | 20 | all 23 |
+|---|---|---|---|
+| EEGNet — predicted / observed | ~62% / **76.8%** | ~70% / **77.7%** | ~71% / **78.6%** |
+| Transformer (time-patch) — predicted / observed | ~55% / **49.3%** | ~66% / **63.6%** | ~68% / **64.3%** |
+
+- ✓ EEGNet above the transformer at every size, largest gap at 5 subjects (27 points), no crossover.
+- ✗ **EEGNet's curve is flat**, not rising: 5 training subjects already give 76.8% (per test
+  subject 0.60–0.98). I expected the cross-subject problem to need many subjects. It does not,
+  because the feature EEGNet can use is one large, same-polarity-in-everyone eye-movement
+  potential: one depthwise spatial filter (≈ F7 − F8) after a low-frequency temporal filter
+  captures it, and ~225 trials are enough to fit that. Its accuracy matches the within-subject
+  ocular decoder (76%), not the motor control (53%).
+- The transformer is at chance with 5 subjects (49.3%) and only reaches ~64% with 20+: it has to
+  learn its spatial projection, temporal filters and attention without EEGNet's built-in
+  "temporal filter → per-filter spatial filter" structure.
+
+### Outcome P3
+
+| tokenisation (all 23 subjects) | predicted | stop on val loss (pre-registered) | stop on val accuracy (post-hoc, D28) |
+|---|---|---|---|
+| time-patch | 65–70% | 64.3% | 65.6% |
+| channel + identity | ≈ time-patch | **56.5%** (best epoch = 1) | 69.9% |
+| channel, no identity | 48–55% (chance) | **57.4%** (p = .001) | 57.4% |
+
+1. **Time-patch vs channel + identity — ✗ under the pre-registered rule, ✓ after the post-hoc check.**
+   The channel + identity model's validation loss rose from the first epoch while its validation
+   accuracy kept improving (over-confident predictions on the 4 validation subjects), so the
+   loss rule kept its epoch-1 weights. Stopping on validation accuracy instead, the two
+   identity-aware tokenisations are within 4.3 points (65.6% vs 69.9%), as predicted.
+2. **No identity — ✗, above chance (57.4%, 257/448, one test subject at 82%).** The model is exactly
+   permutation-invariant (checked), so the prediction's logic holds only if the left/right
+   difference is mirror-symmetric across electrodes. It is not. Post-hoc check
+   (`b2_2_common_mode.csv`, D29): during the saccade (0.2–1 s), left-minus-right is +11.7 µV at F7
+   but only −7.7 µV at F8, 52/64 channels shift the same way, and the **mean over all 64
+   channels** differs by +2.4 µV between left and right trials (32/37 subjects, p = 6e-5). An
+   order-blind model can read such a global shift. The asymmetry is what you would expect if the
+   undocumented recording reference sits off the midline (a horizontal eye movement then moves
+   the reference itself): the same unknown reference A2 had to work around. What the model
+   cannot represent is still any C3-vs-C4 (or F7-vs-F8) *contrast*, so it cannot use lateralised
+   ERD at all; it can only use the reference-induced common-mode part of the eye movement.

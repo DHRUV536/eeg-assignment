@@ -107,7 +107,7 @@ def _atomic_save(obj, path: Path):
 
 
 def train_run(run_id: str, model_name: str, tokeniser: str | None, train_subjects,
-              seed: int = SEED, deadline: float | None = None) -> dict | None:
+              seed: int = SEED, deadline: float | None = None, stop_on: str = "loss") -> dict | None:
     """Train one model; resumes from its per-epoch checkpoint if one exists. Returns the
     result dict when finished, or None if `deadline` (time.time()) was reached first."""
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
@@ -147,9 +147,11 @@ def train_run(run_id: str, model_name: str, tokeniser: str | None, train_subject
         vacc = float((p.argmax(1) == D["yva"]).mean())
         state["history"].append(dict(epoch=state["epoch"], train_loss=tot / len(perm),
                                      val_loss=vloss, val_acc=vacc))
-        # Early stopping on validation loss (smoother than accuracy on 4 subjects).
-        if vloss < state["best_val"] - 1e-4:
-            state.update(best_val=vloss, best_epoch=state["epoch"], bad=0,
+        # Early stopping on validation loss (smoother than accuracy on 4 subjects). The
+        # post-hoc sensitivity runs (stop_on="acc") use validation accuracy instead.
+        crit = vloss if stop_on == "loss" else -vacc
+        if crit < state["best_val"] - 1e-4:
+            state.update(best_val=crit, best_epoch=state["epoch"], bad=0,
                          best_state={k: v.clone() for k, v in model.state_dict().items()})
         else:
             state["bad"] += 1
@@ -167,7 +169,7 @@ def train_run(run_id: str, model_name: str, tokeniser: str | None, train_subject
                 for s in np.unique(D["ste"])}
     hist = pd.DataFrame(state["history"])
     hist.to_csv(MODEL_DIR / f"{run_id}_history.csv", index=False)
-    return dict(run_id=run_id, model=model_name, tokeniser=tokeniser or "",
+    return dict(run_id=run_id, model=model_name, tokeniser=tokeniser or "", stop_on=stop_on,
                 n_train_subjects=len(train_subjects), n_train_trials=len(ytr), seed=seed,
                 n_params=n_params(model), epochs_run=state["epoch"],
                 best_epoch=state["best_epoch"], val_acc=float((pva.argmax(1) == D["yva"]).mean()),

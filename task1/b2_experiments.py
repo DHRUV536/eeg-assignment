@@ -40,6 +40,16 @@ def planned_runs() -> list[dict]:
     return runs
 
 
+def posthoc_runs() -> list[dict]:
+    """Post-hoc (added after seeing B2.2, D28): the pre-registered rule (stop on validation
+    loss) kept the channel+identity model at epoch 1 because its validation loss rose from
+    the start while validation accuracy improved. Re-run the three tokenisers stopping on
+    validation accuracy, so the tokenisation comparison does not hinge on one stopping rule."""
+    train = subject_split()["train"]
+    return [dict(run_id=f"tf-{tok}_nall_stopacc", model_name="transformer", tokeniser=tok,
+                 train_subjects=train, stop_on="acc") for tok in ["time", "chan_id", "chan_noid"]]
+
+
 def b1_summary() -> pd.DataFrame:
     e = n_params(EEGNet())
     rows = [dict(model="EEGNet", tokeniser="", params=e, ratio_to_eegnet=1.0)]
@@ -55,7 +65,7 @@ def b1_summary() -> pd.DataFrame:
 
 def train_all() -> pd.DataFrame:
     budget = float(os.environ["EEG_TIME_BUDGET"]) if os.environ.get("EEG_TIME_BUDGET") else None
-    return run_all(planned_runs(), RUNS_CSV, budget)
+    return run_all(planned_runs() + posthoc_runs(), RUNS_CSV, budget)
 
 
 def per_subject_long(runs: pd.DataFrame) -> pd.DataFrame:
@@ -64,10 +74,40 @@ def per_subject_long(runs: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def common_mode_check() -> pd.DataFrame:
+    """Post-hoc (D29), explains why channel tokens WITHOUT identity beat chance. That model is
+    invariant to electrode order, so it can only use what is the same under any relabelling,
+    e.g. the mean over all electrodes. If left/right differences were mirror-symmetric
+    (F7 +a, F8 -a) that mean would carry nothing. Test it per subject, 0.2-1.0 s (saccade).
+    Uses all kept subjects' data but no model and no labels beyond the class means."""
+    from scipy.stats import ttest_rel
+    from task1.train import network_data
+    d = network_data()
+    X, y, S, ch = d["X"], d["y"], d["subject"], list(d["ch_names"])
+    t = np.arange(X.shape[-1]) / 160.0
+    w = (t >= 0.2) & (t < 1.0)
+    rows = []
+    for s in np.unique(S):
+        m = S == s
+        diff = (X[m & (y == 0)][:, :, w].mean((0, 2)) - X[m & (y == 1)][:, :, w].mean((0, 2))) * 1e6
+        rows.append(dict(subject=int(s), common_mode_LminusR_uV=float(diff.mean()),
+                         F7_LminusR_uV=float(diff[ch.index("F7")]),
+                         F8_LminusR_uV=float(diff[ch.index("F8")]),
+                         n_channels_positive=int((diff > 0).sum())))
+    df = pd.DataFrame(rows)
+    df.round(3).to_csv(OUT / "b2_2_common_mode.csv", index=False)
+    p = ttest_rel(df.common_mode_LminusR_uV, np.zeros(len(df))).pvalue
+    print(f"[B2.2 post-hoc] mean over 64 channels, left-right, 0.2-1 s: "
+          f"{df.common_mode_LminusR_uV.mean():+.2f} uV (t-test p={p:.1g}; "
+          f"{int((df.common_mode_LminusR_uV > 0).sum())}/{len(df)} subjects > 0); "
+          f"F7 {df.F7_LminusR_uV.mean():+.1f} uV vs F8 {df.F8_LminusR_uV.mean():+.1f} uV")
+    return df
+
+
 def report() -> None:
     runs = pd.read_csv(RUNS_CSV)
-    if len(runs) < len(planned_runs()):
-        raise RuntimeError(f"only {len(runs)}/{len(planned_runs())} B2 runs finished; "
+    if len(runs) < len(planned_runs()) + len(posthoc_runs()):
+        raise RuntimeError(f"only {len(runs)} B2 runs finished; "
                            "run the b2train stage first")
     ps = per_subject_long(runs)
     ps.to_csv(OUT / "b2_per_subject.csv", index=False)
@@ -78,7 +118,8 @@ def report() -> None:
     for name, model, tok, c in [("EEGNet", "eegnet", "", "tab:blue"),
                                 (f"Transformer ({SCALING_TRANSFORMER})", "transformer",
                                  SCALING_TRANSFORMER, "tab:orange")]:
-        d = runs[(runs.model == model) & (runs.tokeniser.fillna("") == tok)].sort_values("n_train_subjects")
+        d = runs[(runs.model == model) & (runs.tokeniser.fillna("") == tok)
+                 & (runs.stop_on == "loss")].sort_values("n_train_subjects")
         ax[0].plot(d.n_train_subjects, d.test_acc, "o-", color=c, label=f"{name}: pooled test trials")
         for r in d.itertuples():
             s = ps[ps.run_id == r.run_id].acc
@@ -91,20 +132,25 @@ def report() -> None:
     ax[0].set_title("B2.1 data scaling (seed 42); dots = individual test subjects", fontsize=9)
     ax[0].legend(fontsize=8)
 
-    tok_runs = [("time-patch", f"tf-time_nall"), ("channel + identity", "tf-chan_id_nall"),
-                ("channel, no identity", "tf-chan_noid_nall")]
-    for i, (lab, rid) in enumerate(tok_runs):
-        r = runs[runs.run_id == rid].iloc[0]
-        s = ps[ps.run_id == rid].acc
-        ax[1].bar(i, r.test_acc, color="tab:orange", alpha=0.6)
-        ax[1].scatter(np.full(len(s), i), s, color="k", s=10, zorder=3)
-        ax[1].text(i, r.test_acc + 0.01, f"{r.test_acc:.3f}", ha="center", fontsize=8)
+    toks = [("time-patch", "time"), ("channel +\nidentity", "chan_id"),
+            ("channel,\nno identity", "chan_noid")]
+    for k, (suffix, lab, col, dx) in enumerate([("", "stop on val loss (pre-registered)", "tab:orange", -0.2),
+                                                ("_stopacc", "stop on val accuracy (post-hoc)", "tab:green", 0.2)]):
+        for i, (_, tok) in enumerate(toks):
+            rid = f"tf-{tok}_nall{suffix}"
+            r = runs[runs.run_id == rid].iloc[0]
+            s_ = ps[ps.run_id == rid].acc
+            ax[1].bar(i + dx, r.test_acc, width=0.38, color=col, alpha=0.6, label=lab if i == 0 else None)
+            ax[1].scatter(np.full(len(s_), i + dx), s_, color="k", s=6, zorder=3)
+            ax[1].text(i + dx, 0.32, f"{r.test_acc:.3f}", ha="center", fontsize=7)
     ax[1].axhline(0.5, color="k", lw=0.5)
-    ax[1].set_xticks(range(3), [t[0] for t in tok_runs], fontsize=8)
+    ax[1].set_xticks(range(3), [t[0] for t in toks], fontsize=8)
     ax[1].set_ylim(0.3, 1.0)
     ax[1].set_ylabel("test accuracy")
-    ax[1].set_title("B2.2 tokenisation (all training subjects); dots = test subjects", fontsize=9)
+    ax[1].legend(fontsize=7, loc="upper right")
+    ax[1].set_title("B2.2 tokenisation (all 23 training subjects); dots = test subjects", fontsize=9)
     fig.savefig(OUT / "b2_scaling_tokenisation.png", dpi=120)
     plt.close(fig)
-    print(runs[["run_id", "n_params", "n_train_subjects", "epochs_run", "best_epoch",
+    common_mode_check()
+    print(runs[["run_id", "stop_on", "n_params", "n_train_subjects", "epochs_run", "best_epoch",
                 "val_acc", "test_acc", "test_acc_mean_over_subjects"]].round(3).to_string(index=False))

@@ -63,3 +63,7 @@ Format: **choice** / alternative / why / what would change with the alternative.
 **D26. Resumable training with per-epoch checkpoints (`cache/models/*.ckpt`), including optimiser, batch-order generator and dropout RNG state.** / Train in one go. / The compute environment used here limits each process to a few minutes; restoring the RNG states makes a resumed run identical to an uninterrupted one. `python main.py` without `EEG_TIME_BUDGET` simply runs to the end.
 
 **D27. B2.1 uses the time-patch transformer.** / Channel tokens. / Conventional tokenisation for EEG transformers and the cheapest variant; fixed before any run.
+
+**D28. Post-hoc: the three tokenisations re-run with early stopping on validation accuracy (`*_stopacc` runs).** Added after the pre-registered rule kept the channel+identity model at epoch 1 (validation loss rose from the start while accuracy improved). Both sets of results are reported; the pre-registered ones are primary. "Best transformer" for B2.3 = highest validation accuracy among the transformers trained on all 23 subjects, whichever rule: `tf-time_nall_stopacc` (val 0.717).
+
+**D29. Post-hoc common-mode check (`b2_2_common_mode.csv`).** Added to explain why the permutation-invariant model beat chance: compares left and right trials' mean over all 64 channels in 0.2–1.0 s per subject. It uses class means of all kept subjects but trains nothing, so it does not touch Part B's test evaluation.
