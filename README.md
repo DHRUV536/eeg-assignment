@@ -22,6 +22,14 @@ python main.py --stages a2,a3        # a subset: a1 a2 a3 b1 b2train b2report b2
 - Seed: 42 everywhere (`main.py`, `task1/train.py`); every run is in `outputs/task1/b2_runs.csv`.
 - Run time on a 4-core CPU: Part A ≈ 5 min, Part B training ≈ 40 min, B2.3 ≈ 3 min.
 
+## Reproducibility check
+
+With `cache/` deleted, stages a1, a2, a3, b1 were re-run from the EDF files and reproduced every
+committed CSV and figure byte for byte. Two models (`eegnet_n5`, `tf-time_n5`) were retrained from
+scratch, one of them deliberately interrupted and resumed, and gave bit-identical weights and
+results; the integrated-gradient maps recomputed bit-identically; b2report, b23 and the report
+then reproduced all remaining outputs. (The other nine models were not retrained in that check.)
+
 ## Where things are
 
 | file | what |

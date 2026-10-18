@@ -81,4 +81,6 @@ def load_epochs(subject: int, l_freq: float = L_FREQ, h_freq: float = H_FREQ,
     tmp = CACHE / f"tmp_{os.getpid()}_{tag}"
     epochs.save(tmp, overwrite=True, fmt="single", verbose="error")
     os.replace(tmp, path)
-    return epochs
+    # Return what was cached (float32), not the float64 array still in memory, so a cold run
+    # and every later cached run compute from bit-identical data.
+    return mne.read_epochs(path, preload=True, verbose="error")

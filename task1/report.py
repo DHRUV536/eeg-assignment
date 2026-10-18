@@ -9,6 +9,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from reportlab import rl_config
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.pagesizes import A4
@@ -88,6 +89,7 @@ def numbers() -> dict:
 
 
 def build(path: Path = ROOT / "REPORT.pdf") -> None:
+    rl_config.invariant = 1          # no timestamps/random IDs: identical inputs -> identical PDF
     N = numbers()
     a3, runs, gdel, corr = N["a3"], N["runs"], N["gdel"], N["corr"]
     T = lambda rid: runs.loc[rid, "test_acc"] * 100

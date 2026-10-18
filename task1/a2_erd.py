@@ -276,6 +276,8 @@ def main(out_dir: Path) -> pd.DataFrame:
     # Reference sensitivity: LI and label under each reference, side by side.
     wide = df.pivot(index="subject", columns="reference", values=["li_mu_db", "li_beta_db", "label"])
     wide.columns = [f"{a}_{b}" for a, b in wide.columns]
+    num = [c for c in wide.columns if not c.startswith("label")]
+    wide[num] = wide[num].astype(float).round(4)
     wide.reset_index().to_csv(out_dir / "a2_reference_check.csv", index=False)
 
     # Example subjects depend on the results; clear old ones so no stale figure survives.
