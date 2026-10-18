@@ -1,0 +1,9 @@
+model,part_a_measure,n_subjects,spearman_rho,p
+transformer,li_mu_db,10,0.0365,0.9203
+transformer,acc_ocular,10,0.6433,0.0448
+transformer,acc_visual_evoked,10,0.6585,0.0384
+transformer,acc_motor,10,-0.0305,0.9334
+EEGNet,li_mu_db,10,0.5688,0.0862
+EEGNet,acc_ocular,10,0.4509,0.1909
+EEGNet,acc_visual_evoked,10,0.1687,0.6413
+EEGNet,acc_motor,10,0.2239,0.534

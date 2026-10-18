@@ -1,0 +1,41 @@
+model,group,n_channels,share,share_per_channel_x64
+transformer,frontal/ocular,17,0.2196,0.8265
+transformer,sensorimotor,21,0.3744,1.1411
+transformer,parieto-occipital,18,0.286,1.0168
+transformer,temporal,8,0.12,0.9603
+transformer,time 0.00-0.25s,64,0.0719,
+transformer,time 0.25-0.50s,64,0.0923,
+transformer,time 0.50-0.75s,64,0.1135,
+transformer,time 0.75-1.00s,64,0.0745,
+transformer,time 1.00-1.25s,64,0.0703,
+transformer,time 1.25-1.50s,64,0.064,
+transformer,time 1.50-1.75s,64,0.0471,
+transformer,time 1.75-2.00s,64,0.0506,
+transformer,time 2.00-2.25s,64,0.0511,
+transformer,time 2.25-2.50s,64,0.0544,
+transformer,time 2.50-2.75s,64,0.0496,
+transformer,time 2.75-3.00s,64,0.0481,
+transformer,time 3.00-3.25s,64,0.0513,
+transformer,time 3.25-3.50s,64,0.0486,
+transformer,time 3.50-3.75s,64,0.0479,
+transformer,time 3.75-4.00s,64,0.0648,
+EEGNet,frontal/ocular,17,0.2932,1.1037
+EEGNet,sensorimotor,21,0.3245,0.989
+EEGNet,parieto-occipital,18,0.2188,0.7781
+EEGNet,temporal,8,0.1635,1.3077
+EEGNet,time 0.00-0.25s,64,0.0558,
+EEGNet,time 0.25-0.50s,64,0.1508,
+EEGNet,time 0.50-0.75s,64,0.1566,
+EEGNet,time 0.75-1.00s,64,0.1141,
+EEGNet,time 1.00-1.25s,64,0.0654,
+EEGNet,time 1.25-1.50s,64,0.0284,
+EEGNet,time 1.50-1.75s,64,0.0477,
+EEGNet,time 1.75-2.00s,64,0.0703,
+EEGNet,time 2.00-2.25s,64,0.0689,
+EEGNet,time 2.25-2.50s,64,0.0547,
+EEGNet,time 2.50-2.75s,64,0.0466,
+EEGNet,time 2.75-3.00s,64,0.0409,
+EEGNet,time 3.00-3.25s,64,0.0405,
+EEGNet,time 3.25-3.50s,64,0.0323,
+EEGNet,time 3.50-3.75s,64,0.0178,
+EEGNet,time 3.75-4.00s,64,0.0093,

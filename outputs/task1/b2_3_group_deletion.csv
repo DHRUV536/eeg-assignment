@@ -1,0 +1,53 @@
+model,group,draw,n_channels,acc
+transformer,none,0,0,0.6562
+transformer,frontal/ocular,0,17,0.5379
+transformer,sensorimotor,0,21,0.6719
+transformer,parieto-occipital,0,18,0.6786
+transformer,temporal,0,8,0.6295
+transformer,random 17,0,17,0.5781
+transformer,random 17,1,17,0.7031
+transformer,random 17,2,17,0.558
+transformer,random 17,3,17,0.654
+transformer,random 17,4,17,0.5469
+transformer,random 17,5,17,0.6562
+transformer,random 17,6,17,0.5804
+transformer,random 17,7,17,0.6138
+transformer,random 17,8,17,0.6518
+transformer,random 17,9,17,0.6451
+transformer,random 17,10,17,0.6384
+transformer,random 17,11,17,0.7009
+transformer,random 17,12,17,0.5714
+transformer,random 17,13,17,0.6518
+transformer,random 17,14,17,0.7031
+transformer,random 17,15,17,0.6696
+transformer,random 17,16,17,0.6451
+transformer,random 17,17,17,0.6027
+transformer,random 17,18,17,0.7031
+transformer,random 17,19,17,0.6317
+transformer,HEOG regressed (post-hoc),0,64,0.5268
+EEGNet,none,0,0,0.7857
+EEGNet,frontal/ocular,0,17,0.7768
+EEGNet,sensorimotor,0,21,0.7656
+EEGNet,parieto-occipital,0,18,0.7902
+EEGNet,temporal,0,8,0.7701
+EEGNet,random 17,0,17,0.7612
+EEGNet,random 17,1,17,0.7634
+EEGNet,random 17,2,17,0.7835
+EEGNet,random 17,3,17,0.7634
+EEGNet,random 17,4,17,0.7567
+EEGNet,random 17,5,17,0.779
+EEGNet,random 17,6,17,0.7656
+EEGNet,random 17,7,17,0.7433
+EEGNet,random 17,8,17,0.7701
+EEGNet,random 17,9,17,0.7478
+EEGNet,random 17,10,17,0.7924
+EEGNet,random 17,11,17,0.7589
+EEGNet,random 17,12,17,0.721
+EEGNet,random 17,13,17,0.7612
+EEGNet,random 17,14,17,0.7701
+EEGNet,random 17,15,17,0.7835
+EEGNet,random 17,16,17,0.7656
+EEGNet,random 17,17,17,0.7478
+EEGNet,random 17,18,17,0.7746
+EEGNet,random 17,19,17,0.7723
+EEGNet,HEOG regressed (post-hoc),0,64,0.6496

@@ -201,3 +201,42 @@ A3 ocular, visual-evoked and motor decoder accuracies.
    +2.1 dB), so the LI correlation has little range and n = 10 gives wide uncertainty.
 6. Conclusion expected: the models read the **A3 ocular confound**, with at most a small
    sensorimotor contribution.
+
+### Outcome P4 (from `outputs/task1/b2_3_*.csv`, `b2_3_reliance.png`)
+
+| | predicted | observed |
+|---|---|---|
+| 1. delete top-2 vs random-2 tokens (transformer, 65.6%) | ≈ 55% vs ≈ 63% | **66.1% vs 64.9%**; top-8 vs random-8: 59.2% vs 61.5% |
+| 2. attribution in 0.25–1.5 s (uniform = 31%) | concentrated | transformer 41%, EEGNet 51% (peak 0.25–1.0 s) |
+| 3. frontal/ocular per channel vs sensorimotor | > 2× | transformer 0.83× vs 1.14× of uniform; EEGNet 1.10× vs 0.99× (temporal 1.31×) |
+| 4. zero frontal/ocular (17 ch) | 52–58% both | transformer **53.8%** ✓; EEGNet **77.7%** (−0.9) ✗ |
+| 4. zero sensorimotor (21 ch) | ≤ 3-point cost | transformer +1.6, EEGNet −2.0 ✓ |
+| 5. ρ(model acc, A3 ocular), n = 10 | > 0.5 | transformer **+0.64 (p = .045)** ✓; EEGNet +0.45 (p = .19) |
+| 5. ρ(model acc, A2 mu LI) | \|ρ\| < 0.3 | transformer +0.04 ✓; EEGNet +0.57 (p = .09) ✗ |
+
+- **Deletion was only weakly faithful (✗).** Removing the 1–2 highest-IG time tokens does not hurt
+  more than removing random ones; only from 4 tokens on does it hurt slightly more. Two reasons:
+  the 41-sample temporal filters straddle the 40-sample token boundaries, so information about
+  a deleted token survives in its neighbours; and the evidence (a saccade lasting ~1 s, then a
+  sustained offset) is spread over several tokens, so no single token is decisive.
+- **Region shares were wrong (✗).** I expected attribution to sit on frontal channels. It is spread
+  out, because the eye-movement potential is not frontal-only: it is as large at FT7/T7 as at
+  F7 (A3/B2.2 maps), and through the asymmetric reference it reaches every channel.
+- **EEGNet does not need the frontal channels (✗)**: it reads the same signal from temporal and
+  other channels (its top channels: C4, FT7, F8, AF7, FC5, F7). Zeroing one region at a time
+  cannot remove a volume-conducted signal, so a post-hoc test was added (D30): regress the three
+  horizontal-EOG proxies out of every channel (coefficients fit on training subjects only).
+  **Transformer: 65.6% → 52.7% (chance). EEGNet: 78.6% → 65.0%.**
+- Cross-subject versions of the A3 decoders on the same split: the 3-pair HEOG LDA scores **79.7%**
+  on the test subjects (more than EEGNet), visual-evoked 62.1%, the motor (mu/beta CSD) decoder
+  48.0%.
+
+**Conclusion.** The best transformer reads the **A3 ocular confound** and essentially nothing
+else: its accuracy goes to chance when the frontal channels or the HEOG component are removed,
+and across test subjects it tracks the ocular decoder, not the mu LI. EEGNet reads the ocular
+confound for about half of its above-chance accuracy (13.6 of 28.6 points removed by a linear
+HEOG regression); the remaining 65% is not explained by this analysis: it could be ocular
+signal the linear regression misses (e.g. the saccadic spike potential, non-linear or delayed
+components) or genuine sensorimotor activity (C4 and FC5 are among its top channels). The
+per-subject LI correlation cannot settle it: n = 10, all A2-absent, ρ = +0.13 after regression.
+So: transformer → confound; EEGNet → confound plus an unresolved remainder.
