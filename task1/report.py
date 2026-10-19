@@ -136,7 +136,8 @@ def build(path: Path = ROOT / "REPORT.pdf") -> None:
                f"mean(… | right) in the mu band (positive = contralateral); one-sided label-permutation test (5000), BH-FDR over subjects. "
                f"<b>Result.</b> Present in {len(N['present'])}/{N['n_kept']} (S{', S'.join(map(str, N['present']))}); {N['mu_uncorr']} at uncorrected p &lt; .05; "
                f"group median LI {N['li_median']:+.2f} dB (Wilcoxon p = {N['li_w_p']:.3f}). Contralateral ERD is real on average but reliable "
-               f"in few individuals; many 'absent' subjects show bilateral, non-lateralised ERD (e.g. S082 below)."))
+               f"in few individuals. 'Absent' covers different cases: S082 (below) shows the expected pattern but misses FDR "
+               f"(q = .08), S109 shows weak ERD at C3 whichever hand is imagined, and S080 desynchronises both hemispheres equally."))
     s.append(_img(OUT / "a2_summary.png", 17.5))
     ex = N["examples"]
     grid = Table([[_img(OUT / ex[i], 8.6) for i in (0, 1)], [_img(OUT / ex[i], 8.6) for i in (2, 3)]],
